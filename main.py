@@ -15,6 +15,12 @@ from pipeline import (
     FEATURE_COLS,
 )
 
+from cycle_benchmark import (
+    compute_cycle_characteristics, compare_characteristics_table,
+    plot_characteristics_bar, plot_radar_comparison,
+)
+
+
 plt.rcParams.update({"figure.dpi": 110, "font.size": 9})
 
 ROAD_COLORS = {
@@ -464,6 +470,16 @@ def plot_cycle_summary_table(cycles, validation_results, out_path="figures/cycle
     fig.tight_layout()
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
+
+    my_stats = {env: compute_cycle_characteristics(cycle)
+            for env, cycle in cycles.items() if cycle is not None}
+
+    table = compare_characteristics_table(my_stats, reference_keys=["NEDC", "WLTP_Class3", "MIDC"])
+    table.to_csv("outputs/benchmark_comparison.csv", index=False)
+    print(table.to_string(index=False))
+
+    plot_characteristics_bar(my_stats, reference_keys=["NEDC", "WLTP_Class3", "MIDC"])
+    plot_radar_comparison(my_stats, reference_keys=["NEDC", "WLTP_Class3", "MIDC"])
 
 
 if __name__ == "__main__":
