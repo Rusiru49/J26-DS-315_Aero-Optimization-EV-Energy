@@ -1,4 +1,4 @@
-# Driving Cycle Construction — Prototype
+# Driving Cycle Construction - Prototype
 
 A working, runnable prototype of your methodology, using **synthetic** GPS +
 OBD-II data so you can validate the pipeline structure before you have real
