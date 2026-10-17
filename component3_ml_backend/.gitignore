@@ -1,0 +1,20 @@
+# Python caches
+__pycache__/
+.pytest_cache/
+*.egg-info/
+
+# Datasets are never committed (too big; shared via Google Drive). Regenerate or download:
+#   data/placeholder_sedan/   python scripts/make_dummy_data.py
+#   data/cfd2d_sedan/         experiments/cfd2d_standin/cfd2d_sedan_standin.ipynb (Google Colab)
+#   data/scale_test_sedan/    python scripts/scale_test.py
+#   data/<Member 2 delivery>  shared folder (set config.REAL_DATA_DIR)
+/data/
+
+# Trained models are build outputs: python scripts/run_workflow1.py
+/models/
+
+# Downloaded third-party data (DrivAerML, CC BY-SA 4.0); re-download with the URLs in each SOURCE.md
+experiments/drivaerml/data/drivaerml_small/raw/
+experiments/drivaerml/data/drivaerml_small/download_log.txt
+experiments/drivaerml/data/drivaerml_pctr/raw/
+experiments/drivaerml/data/drivaerml_pctr/mapped_fields.npz
