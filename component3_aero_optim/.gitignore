@@ -1,0 +1,14 @@
+# Generated files; regenerate with placeholder_cfd_generator.py and scripts/run_workflow1.py
+data/placeholder_sedan/
+__pycache__/
+.pytest_cache/
+
+# Downloaded third-party data (DrivAerML, CC-BY-SA 4.0); re-download with the URLs in data/drivaerml_small/SOURCE.md
+data/drivaerml_small/raw/
+data/drivaerml_small/download_log.txt
+data/drivaerml_pctr/raw/
+data/drivaerml_pctr/mapped_fields.npz
+
+# 2D CFD stand-in results (regenerate with colab/cfd2d_sedan_standin.ipynb)
+data/cfd2d_sedan/
+data/scale_test_sedan/
