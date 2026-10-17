@@ -1,0 +1,22 @@
+{
+  "category": "sedan",
+  "source": "PLACEHOLDER (synthetic), not real CFD",
+  "full_car": true,
+  "rho_kg_m3": 1.165,
+  "mu_pa_s": 1.86e-05,
+  "speeds_ms": {
+    "100": 27.78,
+    "40": 11.11
+  },
+  "axes": "Y up, Z length (nose toward +Z), X width",
+  "flow_direction": [
+    0.0,
+    0.0,
+    -1.0
+  ],
+  "normals": "outward from the car into the fluid",
+  "p_ref_pa": 0.0,
+  "tau_convention": "force per area exerted by the fluid on the car (assumed; confirm with Member 2)",
+  "averaging": "last 100 iterations (fieldAverage)",
+  "n_faces": 8640
+}

@@ -31,8 +31,8 @@ component3_ml_backend/
 │   └── cfd2d_standin/         2D OpenFOAM stand-in in Member 2's format (Google Colab notebook)
 ├── tests/                     pytest (52 tests)
 ├── docs/research_papers/      papers used in the proposal
-├── data/                      datasets (NOT in git)
-├── models/                    trained models (NOT in git, rebuilt by run_workflow1.py)
+├── data/                      datasets used (in git): placeholder_sedan, cfd2d_sedan, scale_test_sedan
+├── models/                    trained drag and frontal-area models (in git; rebuilt by run_workflow1.py)
 └── outputs/                   small result summaries (JSON, figures)
 ```
 
@@ -64,7 +64,18 @@ Example on the 2D CFD stand-in: `python scripts/run_workflow1.py data/cfd2d_seda
 ## Data
 
 - **Member 2's data** arrives in the format of the data contract (`run_table.csv`, `design_table.csv`, one NPZ per design and speed). Put it in a folder and set `config.REAL_DATA_DIR`, or pass the folder to the scripts.
-- **Datasets and models are not in git.** They are too big and can be rebuilt. Shared datasets live in the team's Google Drive.
+- **All datasets used in this component are in git** (about 1.5 GB in total), so every result can be reproduced from the repo:
+
+  | Folder | What it is | Size |
+  |---|---|---|
+  | `data/cfd2d_sedan/` | 2D OpenFOAM stand-in, Member 2's format (142 runs) | 1.8 MB |
+  | `data/placeholder_sedan/` | dummy sedan, Member 2's format (invented physics) | 40 MB |
+  | `data/scale_test_sedan/` | dummy at Member 2's file size (260,000 faces per file) | 1.2 GB |
+  | `experiments/drivaerml/data/` | DrivAerML small files, 80 sampled surface files, mapped fields | ~285 MB |
+  | `models/` | trained drag and frontal-area models | 1 MB |
+
+  Tip: to clone without downloading all of it, use `git clone --depth 1 --filter=blob:none <url>`.
+- **Member 2's real CFD data is not in git.** It stays in the shared folder agreed in the data contract (set `config.REAL_DATA_DIR`).
 - Third-party data used in `experiments/drivaerml/`: DrivAerML (Ashton et al., 2024), CC BY-SA 4.0. See each `SOURCE.md`.
 
 ## Status (October 2026)

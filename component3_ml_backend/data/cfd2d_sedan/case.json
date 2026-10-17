@@ -1,0 +1,28 @@
+{
+  "category": "sedan",
+  "source": "2D OpenFOAM stand-in (Component 3), NOT Member 2's data",
+  "solver": "simpleFoam, steady RANS, kOmegaSST, wall functions",
+  "convergence": "drag-based: std over the averaging window < 1% of Cd and drift between its halves < 0.5% (pressure residual stalls near 0.3)",
+  "full_car": false,
+  "dimension": "2D",
+  "span_m": 1.6,
+  "rho_kg_m3": 1.165,
+  "mu_pa_s": 1.86e-05,
+  "speeds_ms": {
+    "100": 27.78,
+    "40": 11.11
+  },
+  "axes": "Y up, Z length (nose toward +Z), X width",
+  "flow_direction": [
+    0,
+    0,
+    -1
+  ],
+  "normals": "outward from the car into the fluid",
+  "p_ref_pa": 0.0,
+  "tau_convention": "force per area exerted by the fluid on the car",
+  "averaging": "fieldAverage over the last 500 of 1500 iterations",
+  "n_faces": 248,
+  "ground": "moving at the free-stream speed",
+  "wheels": false
+}
