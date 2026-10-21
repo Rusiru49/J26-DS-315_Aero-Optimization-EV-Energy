@@ -1,0 +1,12 @@
+# Raw vehicle data
+/data/raw/
+/data/raw_gps.csv
+/data/raw_obd.csv
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
