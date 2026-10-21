@@ -49,8 +49,6 @@ N_TEST = 12
 N_MODES = config.N_POD_MODES
 DRAG = np.array(config.FLOW_DIRECTION, dtype=float)
 NAMES = config.SHAPE_PARAM_NAMES
-LO = np.array([config.SHAPE_PARAM_BOUNDS[n][0] for n in NAMES])
-HI = np.array([config.SHAPE_PARAM_BOUNDS[n][1] for n in NAMES])
 
 
 def gp(d):
@@ -63,7 +61,10 @@ def main():
     ds = CFDDataset(DATA, SPEED)
     runs = ds.runs.reset_index(drop=True)
     ids = runs["run_id"].tolist()
-    x = (runs[NAMES].to_numpy(float) - LO) / (HI - LO)
+    # the box comes from the folder's parameter_ranges.csv, set when the dataset loads
+    lo = np.array([config.SHAPE_PARAM_BOUNDS[n][0] for n in NAMES])
+    hi = np.array([config.SHAPE_PARAM_BOUNDS[n][1] for n in NAMES])
+    x = (runs[NAMES].to_numpy(float) - lo) / (hi - lo)
     cd = runs["Cd"].to_numpy(float)
     cdf = runs["Cd_friction"].to_numpy(float)
     aref = runs["frontal_area"].to_numpy(float)

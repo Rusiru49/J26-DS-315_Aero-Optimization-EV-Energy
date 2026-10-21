@@ -7,6 +7,10 @@ Usage:
     python scripts/run_workflow1.py                  # the dummy dataset, 100 km/h
     python scripts/run_workflow1.py placeholder 40   # the dummy dataset, 40 km/h
     python scripts/run_workflow1.py real 100         # Member 2's data (config.REAL_DATA_DIR)
+    python scripts/run_workflow1.py <folder> 40      # any folder in the contract layout
+
+The models are saved to models/<dataset folder name>_<speed>kmh/, so each
+dataset and speed keeps its own drag and frontal-area model.
 """
 
 import json
@@ -61,8 +65,11 @@ def main():
         sys.exit("Stopping: the data does not match the contract.")
 
     train, holdout = dataset.real_runs(), dataset.holdout_runs()
+    n_low = int(dataset.runs["is_low_confidence"].sum())
     print(f"2. Split by design: {len(train)} training, {len(holdout)} hold-out "
-          f"({dataset.n_failed} failed designs left out)\n")
+          f"({dataset.n_failed} failed designs left out; {n_low} low-confidence designs train only)")
+    box = ", ".join(f"{n} {lo:g}-{hi:g}" for n, (lo, hi) in config.SHAPE_PARAM_BOUNDS.items())
+    print(f"   design box: {box}\n")
 
     pod = fit_pod(dataset)
     print(f"3. POD: {config.N_POD_MODES} patterns explain {explained_variance_ratio(dataset, pod):.1%} of the pressure variation")
@@ -83,7 +90,9 @@ def main():
     gp = helpers[kind]
     shapes = [{n: row[n] for n in config.SHAPE_PARAM_NAMES} for _, row in holdout.iterrows()]
     truth = holdout["Cd"].to_numpy(dtype=float)
-    noise_counts = float(dataset.runs["Cd_std"].mean()) * 1000 if "Cd_std" in dataset.runs else float("nan")
+    # Run noise: Member 2's standard error of the averaged Cd when given, else the iteration spread.
+    noise_col = "Cd_mean_se" if "Cd_mean_se" in dataset.runs else "Cd_std"
+    noise_counts = float(dataset.runs[noise_col].mean()) * 1000 if noise_col in dataset.runs else float("nan")
     print("4. Label check on hold-out designs (shape -> helper -> patterns -> Cd), in drag counts:")
     results = {}
     for k in ("per_mode", "shared"):
@@ -119,11 +128,13 @@ def main():
     for _, r in baseline.iterrows():
         print(f"     {r['model']:14s} {r['holdout_mae_counts']:6.2f} / {r['holdout_max_error_counts']:6.2f}")
 
-    path = save_model(best_model, best_name)
+    tag = os.path.basename(os.path.normpath(dataset.data_dir))
+    model_dir = os.path.join(config.MODELS_DIR, f"{tag}_{speed}kmh")
+    path = save_model(best_model, best_name, out_dir=model_dir)
     print(f"\n7. Best model: {best_name}, saved to {path}")
 
     area_name, area_model, area_table = train_area_model(train, holdout)
-    area_path = save_area_model(area_model)
+    area_path = save_area_model(area_model, out_dir=model_dir)
     best_area = area_table.iloc[0]
     print(f"\n8. Frontal-area model (the energy model needs drag area Cd x A): {area_name}, saved to {area_path}")
     print(f"   hold-out error: mean {best_area['holdout_mae_percent']:.2f}%, worst {best_area['holdout_max_error_percent']:.2f}%")
@@ -147,6 +158,8 @@ def main():
     os.makedirs(config.OUTPUTS_DIR, exist_ok=True)
     summary = {
         "source": source, "speed_kmh": speed, "train_designs": len(train), "holdout_designs": len(holdout),
+        "holdout_ids": holdout["run_id"].tolist(), "low_confidence_designs": n_low,
+        "design_box": {n: list(b) for n, b in config.SHAPE_PARAM_BOUNDS.items()}, "model_dir": model_dir,
         "label_check_mean_counts": mean_counts, "label_check_max_counts": max_counts,
         "helper_kind": kind, "label_method": method, "label_gate_counts": gate * 1000,
         "labeller_cv_counts": {f"{k}+{m}": e * 1000 for (k, m), e in cv.items()},
@@ -156,7 +169,6 @@ def main():
         "frontal_area_model": area_name, "frontal_area_results": area_table.to_dict("records"),
         "repeated_splits": repeats,
     }
-    tag = os.path.basename(os.path.normpath(source))
     with open(os.path.join(config.OUTPUTS_DIR, f"workflow1_{tag}_{speed}kmh.json"), "w") as fh:
         json.dump(summary, fh, indent=2)
 

@@ -6,19 +6,25 @@ The dummy dataset and Member 2's real delivery use the same folder layout
 (see D:\\Research\\Component3-Data-Contract.md), so "placeholder" and "real"
 differ only by the folder they point at:
 
-    <data_dir>/run_table.csv, design_table.csv, case.json (optional)
-    <data_dir>/faces/<category>_<design_id>_<speed>kmh.npz
+    <data_dir>/run_table.csv, design_table.csv
+    <data_dir>/case.json, parameter_ranges.csv (both optional)
+    <data_dir>/npz/<category>_<design_id>_<speed>kmh.npz   (Member 2's folder name;
+                                                           older test data uses faces/)
 
 Contract facts used here:
   * one run-table row per design AND speed; the surface fields are p [Pa] and
     tau [Pa] per face, so the field handed to POD is Cp = p / q_ref;
-  * the model target is Cd_mean (the converged, averaged value);
+  * the model target is Cd_label when the run table has it (Member 2: the
+    full re-mesh value Cd_remesh for low-confidence morphs, otherwise
+    Cd_mean), else Cd_mean (the converged, averaged value);
   * the split is BY DESIGN (both speeds of a design stay on the same side),
-    and the hold-out is drawn from interior designs only (the extreme corner
-    designs and the baseline always stay in training).
+    and the hold-out is drawn from interior, high-confidence designs only
+    (the extreme corner designs, the baseline and the low-confidence morphs
+    always stay in training);
+  * a delivery can be partial: design_table.csv lists all planned designs,
+    run_table.csv only the ones run so far.
 
-Array names inside the NPZ files are an ASSUMPTION until the first real file
-arrives, so read_run_npz() accepts a few common aliases.
+read_run_npz() accepts a few common aliases for the array names.
 """
 
 import json
@@ -62,8 +68,32 @@ def read_run_npz(path):
     return out
 
 
+FACE_FOLDERS = ("npz", "faces")   # Member 2's folder name first, then the older test data's
+
+
 def faces_path(data_dir, design_id, speed_kmh, category=config.CATEGORY):
-    return os.path.join(data_dir, "faces", f"{category}_{design_id}_{speed_kmh}kmh.npz")
+    name = f"{category}_{design_id}_{speed_kmh}kmh.npz"
+    for folder in FACE_FOLDERS:
+        path = os.path.join(data_dir, folder, name)
+        if os.path.exists(path):
+            return path
+    return os.path.join(data_dir, FACE_FOLDERS[-1], name)
+
+
+def read_design_space(data_dir):
+    """The design box and baseline from the folder's parameter_ranges.csv
+    (Member 2's columns: parameter, baseline_D000, design_min, design_max),
+    or None when the folder has no such file."""
+    path = os.path.join(data_dir, "parameter_ranges.csv")
+    if not os.path.exists(path):
+        return None
+    table = pd.read_csv(path).set_index("parameter")
+    missing = [n for n in config.SHAPE_PARAM_NAMES if n not in table.index]
+    if missing:
+        raise KeyError(f"{path}: no range for {missing}")
+    bounds = {n: (float(table.at[n, "design_min"]), float(table.at[n, "design_max"])) for n in config.SHAPE_PARAM_NAMES}
+    baseline = {n: float(table.at[n, "baseline_D000"]) for n in config.SHAPE_PARAM_NAMES}
+    return bounds, baseline
 
 
 def _complete_design_table(designs):
@@ -92,9 +122,10 @@ def _complete_design_table(designs):
 class CFDDataset:
     """
     runs: one row per usable design at ONE speed. Columns: run_id (the
-          design_id), is_holdout, the 5 shape values, Cd (= Cd_mean),
-          Cd_pressure, Cd_friction, Cl, frontal_area, q_ref, is_corner,
-          is_baseline, plus the other run-table columns.
+          design_id), is_holdout, the 5 shape values, Cd (= Cd_label, or
+          Cd_mean without it), Cd_pressure, Cd_friction, Cl, frontal_area,
+          q_ref, is_corner, is_baseline, is_low_confidence, plus the other
+          run-table columns.
     get_field(run_id): Cp = p / q_ref for that design (one value per face).
     get_faces(run_id): the raw per-face arrays (centre, area, normal, p, tau).
     mesh_face_areas: face areas of the baseline D000 (reference only).
@@ -102,6 +133,11 @@ class CFDDataset:
 
     def __init__(self, data_dir, speed_kmh=config.DEFAULT_SPEED_KMH, category=config.CATEGORY):
         self.data_dir, self.speed_kmh, self.category = data_dir, speed_kmh, category
+        # A folder with its own parameter_ranges.csv sets the design box for the
+        # whole pipeline (scaling, augmentation, optimiser).
+        self.design_space = read_design_space(data_dir)
+        if self.design_space:
+            config.set_design_space(*self.design_space)
         runs = normalize_run_table(pd.read_csv(os.path.join(data_dir, "run_table.csv")))
         designs = pd.read_csv(os.path.join(data_dir, "design_table.csv"))
         # case.json is optional (not part of the agreed contract): without it the
@@ -118,9 +154,19 @@ class CFDDataset:
         self.n_failed = int((~usable).sum())
         designs = _complete_design_table(designs)
         runs = runs[usable].merge(designs[["design_id", "is_corner", "is_baseline", "run_order"]], on="design_id", how="left")
-        # The run table's "Cd" is the final-iteration value; the model target is Cd_mean.
+        if "morph_confidence" not in runs:
+            runs["morph_confidence"] = "high"
+        runs["is_low_confidence"] = runs["morph_confidence"].astype(str).str.lower().eq("low")
+        # The run table's "Cd" is the final-iteration value; the model target is
+        # Cd_label (Member 2's chosen label) when present, else Cd_mean.
         runs = runs.rename(columns={"Cd": "Cd_final_iteration"})
-        runs = runs.rename(columns={"design_id": "run_id", "Cd_mean": "Cd", "Cd_p": "Cd_pressure",
+        runs["Cd"] = runs["Cd_label"].fillna(runs["Cd_mean"]) if "Cd_label" in runs else runs["Cd_mean"]
+        # Cd_p and Cd_f come from the morphed-mesh run and add up to Cd_mean. Where
+        # the label is the re-mesh value, scale both parts so they add up to the
+        # label (approximation, only for the low-confidence training designs).
+        scale = runs["Cd"] / runs["Cd_mean"]
+        runs["Cd_p"], runs["Cd_f"] = runs["Cd_p"] * scale, runs["Cd_f"] * scale
+        runs = runs.rename(columns={"design_id": "run_id", "Cd_p": "Cd_pressure",
                                     "Cd_f": "Cd_friction", "A_frontal": "frontal_area"})
         self.runs = runs.sort_values("run_order").reset_index(drop=True)
         self.assign_holdout(config.RANDOM_STATE + 7)
@@ -129,10 +175,12 @@ class CFDDataset:
         self.mesh_face_areas = read_run_npz(base)["area"] if os.path.exists(base) else None
 
     def assign_holdout(self, seed):
-        """Hold out ~HOLDOUT_FRACTION of the designs, drawn from the interior
-        designs only (corners and the baseline always train)."""
+        """Hold out ~HOLDOUT_FRACTION of the designs, drawn from the interior,
+        high-confidence designs only (corners, the baseline and low-confidence
+        morphs always train: their label is not checked on the same mesh)."""
         runs = self.runs
-        eligible = runs[~runs["is_corner"].astype(bool) & ~runs["is_baseline"].astype(bool)]["run_id"].sort_values()
+        eligible = runs[~runs["is_corner"].astype(bool) & ~runs["is_baseline"].astype(bool)
+                        & ~runs["is_low_confidence"]]["run_id"].sort_values()
         n_hold = int(round(config.HOLDOUT_FRACTION * len(runs)))
         rng = np.random.default_rng(seed)
         holdout_ids = set(rng.choice(eligible.to_numpy(), size=min(n_hold, len(eligible)), replace=False).tolist())

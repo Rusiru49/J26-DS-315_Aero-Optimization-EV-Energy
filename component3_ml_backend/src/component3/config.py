@@ -40,8 +40,11 @@ RANDOM_STATE = 42
 # ------------------------------------------------------------------ #
 VEHICLE_MASS_KG = 1650.0
 BATTERY_CAPACITY_KWH = 50.0
-BASELINE_CD = 0.30
-FRONTAL_AREA_M2 = 2.4
+# Baseline sedan D000 from Member 2's CFD (100 km/h, coarse mesh, delivery
+# of 2026-10-20): Cd_label 0.3668, A_frontal 2.1812 m^2. Only changes between
+# shapes are meaningful (the coarse mesh reads about 3.5% low).
+BASELINE_CD = 0.3668
+FRONTAL_AREA_M2 = 2.1812
 ROLLING_RESISTANCE_COEFF = 0.011  # C_rr, typical passenger-EV tyre on asphalt
 
 DRIVETRAIN_EFFICIENCY = 0.90
@@ -60,11 +63,16 @@ AIR_DENSITY_KG_M3 = 1.165
 ELECTRICITY_TARIFF_LKR_PER_KWH = 45.0
 
 # ------------------------------------------------------------------ #
-# SHAPE PARAMETERS — the 5 locked design variables and their styling
-# limits (realistic min/max a stylist could vary within). Placeholder
-# ranges informed by the literature in "Component 3 Research Papers/";
-# TODO: replace with Member 1's confirmed design-space bounds (regulatory
-# limits + comparable-EV survey + the CFD sampling box) once available.
+# SHAPE PARAMETERS — the 5 locked design variables and their limits.
+# Member 2's parameter_ranges.csv (delivery of 2026-10-20), which Member 2
+# copied from Member 1's design space; the baseline is the midpoint of each
+# range. TODO: Member 1 to confirm the ranges and their evidence basis
+# (Component3-Request-to-Member1.md, B1-B3).
+#
+# A data folder can carry its own parameter_ranges.csv; the loader then
+# calls set_design_space() so the whole pipeline uses that folder's box.
+# The older test datasets (placeholder, 2D stand-in, scale test) were made
+# with the earlier guessed box and carry it in their own parameter_ranges.csv.
 # ------------------------------------------------------------------ #
 SHAPE_PARAM_NAMES = [
     "windshield_angle_deg",
@@ -74,27 +82,30 @@ SHAPE_PARAM_NAMES = [
     "ground_clearance_mm",
 ]
 
-# Member 2's ranges (data contract, 2026-10-10): spoiler 0-25 deg, boat-tail
-# 0-20 deg, ground clearance 130-190 mm. Windshield and hood are NOT final:
-# Member 2 proposes "baseline +/- 5 deg" with baselines still TBD, so those
-# two are placeholders around an assumed baseline.
 SHAPE_PARAM_BOUNDS = {
-    "windshield_angle_deg": (25.0, 35.0),   # TBD: placeholder, baseline 30 +/- 5
-    "spoiler_angle_deg": (0.0, 25.0),
-    "boat_tail_angle_deg": (0.0, 20.0),
-    "hood_angle_deg": (1.0, 11.0),          # TBD: placeholder, baseline 6 +/- 5
-    "ground_clearance_mm": (130.0, 190.0),
+    "windshield_angle_deg": (22.0, 34.0),
+    "spoiler_angle_deg": (0.0, 20.0),
+    "boat_tail_angle_deg": (5.0, 25.0),
+    "hood_angle_deg": (5.0, 15.0),
+    "ground_clearance_mm": (110.0, 190.0),
 }
 
-# Baseline (undeformed) sedan shape = design D000. TBD from Member 2; the
-# values below are placeholders inside the ranges above.
+# Baseline (undeformed) sedan shape = design D000.
 BASELINE_SHAPE = {
-    "windshield_angle_deg": 30.0,
-    "spoiler_angle_deg": 5.0,
-    "boat_tail_angle_deg": 8.0,
-    "hood_angle_deg": 6.0,
-    "ground_clearance_mm": 160.0,
+    "windshield_angle_deg": 28.0,
+    "spoiler_angle_deg": 10.0,
+    "boat_tail_angle_deg": 15.0,
+    "hood_angle_deg": 10.0,
+    "ground_clearance_mm": 150.0,
 }
+
+
+def set_design_space(bounds, baseline):
+    """Switch the design box and baseline used by every module. The dicts are
+    updated in place, so modules that already hold a reference see the change."""
+    SHAPE_PARAM_BOUNDS.update({n: (float(bounds[n][0]), float(bounds[n][1])) for n in SHAPE_PARAM_NAMES})
+    BASELINE_SHAPE.update({n: float(baseline[n]) for n in SHAPE_PARAM_NAMES})
+
 
 # ------------------------------------------------------------------ #
 # DATA CONTRACT WITH MEMBER 2 (see D:\Research\Component3-Data-Contract.md)
@@ -102,16 +113,17 @@ BASELINE_SHAPE = {
 CATEGORY = "sedan"
 SPEEDS_MS = {100: 27.78, 40: 11.11}   # key = km/h, value = m/s
 DEFAULT_SPEED_KMH = 100
-# CAD axes: nose toward +Z, so the air flows toward -Z. To be confirmed from
-# Member 2's check script.
+# CAD axes: nose toward +Z, so the air flows toward -Z (confirmed in Member 2's
+# case.json).
 FLOW_DIRECTION = (0.0, 0.0, -1.0)
 LIFT_DIRECTION = (0.0, 1.0, 0.0)      # Y is up
 DYNAMIC_VISCOSITY_PA_S = 1.86e-5
 N_DESIGNS = 70                        # LHS designs per category (baseline D000 is extra)
-CD_SUM_CHECK_TOLERANCE = 0.01         # Member 2's integrity-check tolerance [to confirm]
+CD_SUM_CHECK_TOLERANCE = 0.01         # Member 2's integrity-check tolerance (1%)
 
-# Placeholder data uses the same folder layout Member 2 will deliver. Set
-# REAL_DATA_DIR to the shared folder once it exists (location TBD).
+# Placeholder data uses the same folder layout Member 2 delivers. Member 2's
+# real data is not in git: set REAL_DATA_DIR to its folder, or pass the
+# folder to the scripts.
 PLACEHOLDER_DATA_DIR = os.path.join(COMPONENT_ROOT, "data", "placeholder_sedan")
 REAL_DATA_DIR = None
 

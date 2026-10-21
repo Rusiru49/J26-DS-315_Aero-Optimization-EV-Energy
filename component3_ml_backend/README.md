@@ -63,7 +63,12 @@ Example on the 2D CFD stand-in: `python scripts/run_workflow1.py data/cfd2d_seda
 
 ## Data
 
-- **Member 2's data** arrives in the format of the data contract (`run_table.csv`, `design_table.csv`, one NPZ per design and speed). Put it in a folder and set `config.REAL_DATA_DIR`, or pass the folder to the scripts.
+- **Member 2's data** arrives in the format of the data contract (`run_table.csv`, `design_table.csv`, `parameter_ranges.csv`, one NPZ per design and speed in `npz/`). Put it in a folder and set `config.REAL_DATA_DIR`, or pass the folder to the scripts. How the loader reads it:
+  - **label:** `Cd_label` (Member 2's choice: the re-mesh value for low-confidence morphs, otherwise `Cd_mean`);
+  - **test set:** low-confidence designs (`morph_confidence = low`) are used for training but never tested on;
+  - **part deliveries:** designs listed in `design_table.csv` but not run yet are only a warning;
+  - **design box:** a folder's own `parameter_ranges.csv` sets the box and baseline for the whole pipeline. The older test datasets carry the earlier guessed box this way.
+- **Trained models** are saved per dataset and speed, in `models/<dataset folder>_<speed>kmh/`.
 - **All datasets used in this component are in git** (about 1.5 GB in total), so every result can be reproduced from the repo:
 
   | Folder | What it is | Size |
