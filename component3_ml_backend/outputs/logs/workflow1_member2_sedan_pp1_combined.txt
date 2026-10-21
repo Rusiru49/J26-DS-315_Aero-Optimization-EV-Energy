@@ -10,3 +10,31 @@
 
 4. Cross-validation by design: 4 groups x 3 repeats; every testable design is the exam once per repeat, hidden at every speed
    running 12 folds (2 parallel workers)
+   22 designs can be tested
+   labeller chosen inside the folds, 40 km/h: per_mode+ridge, 15 patterns x1, per_mode+ridge, 2 patterns x3, per_mode+ridge, 4 patterns x1, shared+ridge, 2 patterns x4, shared+ridge, 4 patterns x2, shared+ridge, 6 patterns x1
+   labeller chosen inside the folds, 100 km/h: per_mode+ridge, 10 patterns x1, per_mode+ridge, 2 patterns x7, per_mode+ridge, 4 patterns x1, shared+ridge, 2 patterns x2, shared+ridge, 4 patterns x1
+
+5. Results on REAL designs only, drag counts (mean over repeats +/- spread, worst design):
+   --- 40 km/h
+   helper labels (label check)         9.8 +/-  1.6   worst  30.9
+   xgboost        with augmentation    9.8 +/-  1.4   real only   18.3 +/-  2.2   (augmentation better in 3/3 repeats)
+   random_forest  with augmentation   10.1 +/-  1.5   real only   16.3 +/-  2.3   (augmentation better in 3/3 repeats)
+   ann_mlp        with augmentation   10.2 +/-  1.9   real only   10.6 +/-  0.7   (augmentation better in 2/3 repeats)
+   ann_mlp+aug_weighted         10.2 +/-  1.7   worst  34.3
+   ann_mlp+pretrain_finetune    10.2 +/-  1.9   worst  35.0
+   diagnostic - augmented models vs synthetic shapes they never saw: xgboost 3.1, random_forest 4.4, ann_mlp 2.4
+   --- 100 km/h
+   helper labels (label check)         8.8 +/-  2.1   worst  33.4
+   xgboost        with augmentation    8.8 +/-  1.4   real only   18.2 +/-  1.8   (augmentation better in 3/3 repeats)
+   random_forest  with augmentation    9.2 +/-  1.4   real only   15.9 +/-  1.5   (augmentation better in 3/3 repeats)
+   ann_mlp        with augmentation    8.7 +/-  1.9   real only    9.8 +/-  0.2   (augmentation better in 2/3 repeats)
+   ann_mlp+aug_weighted          9.5 +/-  2.0   worst  37.1
+   ann_mlp+pretrain_finetune     8.7 +/-  1.9   worst  33.1
+   diagnostic - augmented models vs synthetic shapes they never saw: xgboost 2.6, random_forest 3.8, ann_mlp 1.8
+
+6. Chosen drag model: xgboost+aug (lowest cross-validated error averaged over the speeds). Augmentation IS used.
+   one model, inputs ['windshield_angle_deg', 'spoiler_angle_deg', 'boat_tail_angle_deg', 'hood_angle_deg', 'ground_clearance_mm', 'speed_kmh']; retrained on all designs at all speeds, saved to D:\Research\J26-DS-315_Aero-Optimization-EV-Energy\component3_ml_backend\models\member2_sedan_pp1
+   expected error on a new shape at 40 km/h: about 9.8 drag counts (RMSE 12.8, worst seen 31.2)
+   expected error on a new shape at 100 km/h: about 8.8 drag counts (RMSE 11.8, worst seen 32.9)
+
+7. Frontal-area model (geometry, no speed): quadratic_ridge, cross-validated error mean 0.00%, worst 0.02%

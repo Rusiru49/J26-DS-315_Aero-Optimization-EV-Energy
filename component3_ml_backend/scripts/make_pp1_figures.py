@@ -82,7 +82,7 @@ def fig_model_errors():
     handles = [plt.Rectangle((0, 0), 1, 1, color=REAL), plt.Rectangle((0, 0), 1, 1, color=AUG)]
     fig.legend(handles, ["trained on the real CFD designs only", "trained with physics-labelled augmentation"],
                loc="upper center", bbox_to_anchor=(0.5, 1.02), ncol=2, frameon=False, fontsize=10)
-    fig.suptitle(f"Workflow 1 on Member 2's real CFD ({summary['n_designs']} shapes): which drag model is most accurate?",
+    fig.suptitle(f"Workflow 1 on Member 2's real CFD ({summary['n_designs']} shapes, one model with speed as input): which drag model is most accurate?",
                  fontsize=13, color=INK, y=1.09)
     fig.text(0.01, -0.04, f"Validation: {summary['validation']}. Bars = mean over repeats, "
              "whiskers = spread between repeats. Lower is better.", fontsize=9, color=MUTED)

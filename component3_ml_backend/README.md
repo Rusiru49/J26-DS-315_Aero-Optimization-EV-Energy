@@ -11,7 +11,7 @@ It has two workflows:
 |---|---|---|
 | Input | Member 2's CFD runs (contract format) | 5 shape values, vehicle details, driving cycle |
 | Steps | data check → POD → cross-validation by design (in each fold: physics labeller → 1,200 physics-labelled synthetic shapes → XGBoost / Random Forest / ANN, with and without augmentation, scored on real designs only) → pick the lowest-error model → retrain it on all designs | drag model → energy model → Bayesian optimiser (Optuna) → "near-optimal" or "better shape found" |
-| Output | `models/<dataset>_<speed>kmh/`: `drag_model.joblib`, `frontal_area_model.joblib`, `model_card.json` (model, design box, cross-validated error) | Wh/km, range, cost for the baseline and the best shape |
+| Output | `models/<dataset>/`: `drag_model.joblib` (inputs: 5 shape values + speed), `frontal_area_model.joblib`, `model_card.json` (model, inputs, design box, cross-validated error per speed) | Wh/km, range, cost for the baseline and the best shape |
 
 ## Folder structure
 
@@ -54,14 +54,14 @@ All commands from this folder, with the venv's Python:
 |---|---|
 | Make the dummy dataset | `python scripts/make_dummy_data.py` |
 | Check a dataset folder | `python scripts/check_dataset.py <folder>` |
-| Build the drag model | `python scripts/run_workflow1.py <placeholder \| real \| folder> <speed_kmh>` |
+| Build the drag model (all speeds, one model) | `python scripts/run_workflow1.py <placeholder \| real \| folder> [speed ...]` |
 | Energy model on the 5 driving cycles | `python scripts/run_workflow2_demo.py` |
 | Predicted vs real pressure figure | `python scripts/plot_pressure_prediction.py <folder>` |
 | Size test at Member 2's file size | `python scripts/scale_test.py` |
 | PP1 figures (from saved results) | `python scripts/make_pp1_figures.py` |
 | Tests | `python -m pytest tests` |
 
-Example on the 2D CFD stand-in: `python scripts/run_workflow1.py data/cfd2d_sedan 100`
+Example on Member 2's data: `python scripts/run_workflow1.py real`
 
 ## Data
 
@@ -70,7 +70,7 @@ Example on the 2D CFD stand-in: `python scripts/run_workflow1.py data/cfd2d_seda
   - **test set:** low-confidence designs (`morph_confidence = low`) are used for training but never tested on;
   - **part deliveries:** designs listed in `design_table.csv` but not run yet are only a warning;
   - **design box:** a folder's own `parameter_ranges.csv` sets the box and baseline for the whole pipeline. The older test datasets carry the earlier guessed box this way.
-- **Trained models** are saved per dataset and speed, in `models/<dataset folder>_<speed>kmh/`.
+- **Trained models** are saved per dataset, in `models/<dataset folder>/`: one drag model for all speeds.
 
 ## How Workflow 1 tests itself
 
@@ -92,7 +92,7 @@ The candidates are XGBoost, Random Forest and ANN, each trained with the 1,200 p
   | `models/` | trained drag and frontal-area models | 1 MB |
 
   Tip: to clone without downloading all of it, use `git clone --depth 1 --filter=blob:none <url>`.
-- **Member 2's real CFD data** (PP1 delivery) is in `data/member2_sedan_pp1/`; `config.REAL_DATA_DIR` points to it, so `run_workflow1.py real <speed>` uses it.
+- **Member 2's real CFD data** (PP1 delivery) is in `data/member2_sedan_pp1/`; `config.REAL_DATA_DIR` points to it, so `run_workflow1.py real` uses it.
 - Third-party data used in `experiments/drivaerml/`: DrivAerML (Ashton et al., 2024), CC BY-SA 4.0. See each `SOURCE.md`.
 
 ## Status (October 2026)
@@ -103,7 +103,8 @@ Workflow 1, the energy model and the optimiser are built and tested (60 tests).
 - **Member 2's real data, PP1 delivery** (30 shapes x 2 speeds), cross-validated on the 22 testable designs (drag counts, 40 / 100 km/h):
   - a helper study (`experiments/helper_study/`) found where the labeller loses accuracy: patterns beyond the first two cannot be predicted from 30 shapes and pulled extreme shapes toward the average. Choosing the number of patterns by cross-validation (version H3, mostly 2 patterns) won at both speeds among 5 versions fixed in advance, and is now part of Workflow 1;
   - with it the labels are 9.8 / 8.8 off (14.0 / 13.0 before), and **augmentation beats training on the real designs alone for every model**: XGBoost 9.7 / 9.1 vs 18.2 / 17.2, Random Forest 10.3 / 9.6 vs 16.1 / 14.8, ANN 10.1 / 9.3 vs 10.1 / 10.8;
-  - the pipeline now chooses **XGBoost + physics-labelled augmentation** at both speeds (expected error about 9-10 drag counts, about 2.5%);
+  - **one drag model for all speeds** (inputs: the 5 shape values + speed in km/h; `experiments/speed_study/` showed it is as accurate as one model per speed, and it scales to new CFD speeds). Saved in `models/member2_sedan_pp1/`;
+  - the pipeline chooses **XGBoost + physics-labelled augmentation** (9.8 / 8.8 drag counts at 40 / 100 km/h, about 2.5%); augmentation beats real-only training for every model at both speeds;
   - remaining limit: about 6 counts are lost because 30 shapes cannot describe every new shape's pressure; more shapes are needed for that part;
   - PP1 figures: `python scripts/make_pp1_figures.py` writes `outputs/figures/pp1_fig*.png`; run logs are in `outputs/logs/`.
 
