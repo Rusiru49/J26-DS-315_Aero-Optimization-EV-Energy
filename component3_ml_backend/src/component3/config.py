@@ -122,10 +122,10 @@ N_DESIGNS = 70                        # LHS designs per category (baseline D000 
 CD_SUM_CHECK_TOLERANCE = 0.01         # Member 2's integrity-check tolerance (1%)
 
 # Placeholder data uses the same folder layout Member 2 delivers. Member 2's
-# real data is not in git: set REAL_DATA_DIR to its folder, or pass the
-# folder to the scripts.
+# PP1 delivery (30 sedan shapes x 2 speeds, 2026-10-21) is in the repo; a later
+# delivery goes in its own folder and REAL_DATA_DIR points to it.
 PLACEHOLDER_DATA_DIR = os.path.join(COMPONENT_ROOT, "data", "placeholder_sedan")
-REAL_DATA_DIR = None
+REAL_DATA_DIR = os.path.join(COMPONENT_ROOT, "data", "member2_sedan_pp1")
 
 # ------------------------------------------------------------------ #
 # POD / AUGMENTATION / SURROGATE

@@ -1,0 +1,32 @@
+{
+ "air_density_kg_m3": 1.165,
+ "dynamic_viscosity_Pa_s": 1.86e-05,
+ "speeds_kmh": [
+  100,
+  40
+ ],
+ "speeds_m_s": [
+  27.78,
+  11.11
+ ],
+ "turbulence_model": "k-omega SST (simpleFoam, steady RANS)",
+ "p_ref_Pa_gauge": 0,
+ "p_unit": "Pa (not divided by density)",
+ "averaging_window_iterations": 100,
+ "Cd": "final iteration",
+ "Cd_mean": "mean of last 100 iterations (same window as exported fields)",
+ "Cd_mean500": "mean of last 500 iterations",
+ "full_car": true,
+ "flow_direction": "-Z",
+ "normals": "outward from car into fluid",
+ "tau": "wall shear stress on the car surface (force of air on surface per area), Pa",
+ "units": {
+  "centre": "m (CAD frame)",
+  "area": "m2",
+  "A_frontal": "m2"
+ },
+ "solver": "OpenFOAM v2606",
+ "mesh": "coarse ~0.57 M cells (mesh independence: 0.57/1.02/1.86 M)",
+ "iterations": 1500,
+ "n_faces": 44279
+}

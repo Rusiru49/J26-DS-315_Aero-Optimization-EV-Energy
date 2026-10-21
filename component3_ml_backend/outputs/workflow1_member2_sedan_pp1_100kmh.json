@@ -1,0 +1,142 @@
+{
+  "dataset": "member2_sedan_pp1",
+  "speed_kmh": 100,
+  "created": "2026-10-21",
+  "drag_model": "ann_mlp+real",
+  "model": "ann_mlp",
+  "uses_augmentation": false,
+  "n_designs": 30,
+  "drag_model_file": "drag_model.joblib",
+  "frontal_area_model": "quadratic_ridge",
+  "frontal_area_model_file": "frontal_area_model.joblib",
+  "inputs": [
+    "windshield_angle_deg",
+    "spoiler_angle_deg",
+    "boat_tail_angle_deg",
+    "hood_angle_deg",
+    "ground_clearance_mm"
+  ],
+  "design_box": {
+    "windshield_angle_deg": [
+      22.0,
+      34.0
+    ],
+    "spoiler_angle_deg": [
+      0.0,
+      20.0
+    ],
+    "boat_tail_angle_deg": [
+      5.0,
+      25.0
+    ],
+    "hood_angle_deg": [
+      5.0,
+      15.0
+    ],
+    "ground_clearance_mm": [
+      110.0,
+      190.0
+    ]
+  },
+  "baseline_shape": {
+    "windshield_angle_deg": 28.0,
+    "spoiler_angle_deg": 10.0,
+    "boat_tail_angle_deg": 15.0,
+    "hood_angle_deg": 10.0,
+    "ground_clearance_mm": 150.0
+  },
+  "cd_error_mae": 0.010848002500185723,
+  "cd_error_rmse": 0.013755167898309712,
+  "cd_error_worst": 0.03205441995113001,
+  "frontal_area_error_mae_percent": 0.0033087675817100744,
+  "validation": "cross-validation by design, 4 groups x 3 repeats, 22 testable designs, scored on real CFD only",
+  "source": "real",
+  "n_testable": 22,
+  "low_confidence_designs": 3,
+  "labeller_choices": {
+    "per_mode+ridge": 11,
+    "shared+ridge": 1
+  },
+  "results_counts": [
+    {
+      "candidate": "xgboost+aug",
+      "mae": 13.28,
+      "mae_spread": 1.69,
+      "rmse": 16.43,
+      "worst": 37.52
+    },
+    {
+      "candidate": "xgboost+real",
+      "mae": 17.21,
+      "mae_spread": 1.15,
+      "rmse": 20.14,
+      "worst": 53.29
+    },
+    {
+      "candidate": "random_forest+aug",
+      "mae": 13.39,
+      "mae_spread": 1.46,
+      "rmse": 16.47,
+      "worst": 31.64
+    },
+    {
+      "candidate": "random_forest+real",
+      "mae": 14.78,
+      "mae_spread": 0.19,
+      "rmse": 17.51,
+      "worst": 39.76
+    },
+    {
+      "candidate": "ann_mlp+aug",
+      "mae": 11.72,
+      "mae_spread": 1.63,
+      "rmse": 15.17,
+      "worst": 37.33
+    },
+    {
+      "candidate": "ann_mlp+real",
+      "mae": 10.85,
+      "mae_spread": 0.38,
+      "rmse": 13.76,
+      "worst": 32.05
+    },
+    {
+      "candidate": "label",
+      "mae": 12.98,
+      "mae_spread": 1.69,
+      "rmse": 16.04,
+      "worst": 36.01
+    }
+  ],
+  "diagnostic_counts": {
+    "xgboost": 3.08,
+    "random_forest": 4.69,
+    "ann_mlp": 4.2
+  },
+  "augmentation_wins": {
+    "xgboost": [
+      3,
+      3
+    ],
+    "random_forest": [
+      2,
+      3
+    ],
+    "ann_mlp": [
+      1,
+      3
+    ]
+  },
+  "frontal_area_results": [
+    {
+      "model": "quadratic_ridge",
+      "mae_percent": 0.0033087675817100744,
+      "worst_percent": 0.01708315828017608
+    },
+    {
+      "model": "linear_ridge",
+      "mae_percent": 0.02932753222136256,
+      "worst_percent": 0.09006826763303001
+    }
+  ]
+}

@@ -6,5 +6,4 @@ __pycache__/
 # All datasets and trained models used in this component ARE committed (the
 # owner's decision, 2026-10-18), so every result can be reproduced from the repo.
 # Sources and licences: experiments/drivaerml/data/*/SOURCE.md (DrivAerML, CC BY-SA 4.0).
-# Member 2's real CFD data is NOT expected here: it stays in the shared folder
-# agreed in the data contract (set config.REAL_DATA_DIR).
+# Member 2's real CFD data (PP1 delivery) is in data/member2_sedan_pp1/.

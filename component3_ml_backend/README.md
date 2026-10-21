@@ -79,10 +79,11 @@ With about 20 designs, a single hold-out of 4 designs is too noisy to trust. So 
 - every candidate is scored on **real CFD designs only**, never on synthetic shapes.
 
 The candidates are XGBoost, Random Forest and ANN, each trained with the 1,200 physics-labelled shapes and on the real designs only. **The lowest cross-validated error wins**, so augmentation is used exactly when it helps. The winner is then retrained on all designs, and its cross-validated error is the uncertainty given with it. A diagnostic also scores the augmented models on synthetic shapes they never saw: if that error is small while the real-design error is large, the helper (labeller) is the weak link.
-- **All datasets used in this component are in git** (about 1.5 GB in total), so every result can be reproduced from the repo:
+- **All datasets used in this component are in git** (about 1.6 GB in total), so every result can be reproduced from the repo:
 
   | Folder | What it is | Size |
   |---|---|---|
+  | `data/member2_sedan_pp1/` | **Member 2's real CFD data, PP1 delivery: 30 sedan shapes x 2 speeds (60 runs)** | 108 MB |
   | `data/cfd2d_sedan/` | 2D OpenFOAM stand-in, Member 2's format (142 runs) | 1.8 MB |
   | `data/placeholder_sedan/` | dummy sedan, Member 2's format (invented physics) | 40 MB |
   | `data/scale_test_sedan/` | dummy at Member 2's file size (260,000 faces per file) | 1.2 GB |
@@ -90,7 +91,7 @@ The candidates are XGBoost, Random Forest and ANN, each trained with the 1,200 p
   | `models/` | trained drag and frontal-area models | 1 MB |
 
   Tip: to clone without downloading all of it, use `git clone --depth 1 --filter=blob:none <url>`.
-- **Member 2's real CFD data is not in git.** It stays in the shared folder agreed in the data contract (set `config.REAL_DATA_DIR`).
+- **Member 2's real CFD data** (PP1 delivery) is in `data/member2_sedan_pp1/`; `config.REAL_DATA_DIR` points to it, so `run_workflow1.py real <speed>` uses it.
 - Third-party data used in `experiments/drivaerml/`: DrivAerML (Ashton et al., 2024), CC BY-SA 4.0. See each `SOURCE.md`.
 
 ## Status (October 2026)
@@ -98,10 +99,10 @@ The candidates are XGBoost, Random Forest and ANN, each trained with the 1,200 p
 Workflow 1, the energy model and the optimiser are built and tested (60 tests).
 
 - **2D CFD stand-in:** physics-labelled augmentation lowered the drag-model error by 50-65%.
-- **Member 2's real data so far** (24 shapes x 2 speeds), cross-validated on the 17 testable designs:
-  - the synthetic labels are about 16-18 drag counts off, worst for the lowest-drag shapes (D061, D005);
-  - the models learn those labels to within about 3-4 counts, so the labeller is the weak link, not the drag models;
-  - at this data size augmentation does not beat the ANN trained on the real designs only (about 12 drag counts), so the pipeline chose the real-only ANN at both speeds;
-  - re-run when Member 2's further shapes arrive.
+- **Member 2's real data, PP1 delivery** (30 shapes x 2 speeds), cross-validated on the 22 testable designs (drag counts, 40 / 100 km/h):
+  - synthetic labels 14.0 / 13.0 off (16-18 with 24 shapes); the models learn them to within about 3-4 counts;
+  - augmentation now beats real-only training for XGBoost (3/3 repeats at both speeds) and Random Forest (3/3, 2/3);
+  - the ANN trained on the real designs only is still best (10.1 / 10.8), with the augmented ANN close at 100 km/h (11.7), so the pipeline chose the real-only ANN at both speeds;
+  - the gap closed as the data grew from 24 to 30 shapes; re-run when the full set arrives.
 
 Still to do: the FastAPI service for Component 4.
