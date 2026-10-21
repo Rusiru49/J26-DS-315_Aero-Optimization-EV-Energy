@@ -3,6 +3,10 @@
 /data/raw_gps.csv
 /data/raw_obd.csv
 
+# Generated intermediate and output artifacts
+/data/intermediate/
+/data/outputs/
+
 # Python artifacts
 __pycache__/
 *.py[cod]
