@@ -1,0 +1,12 @@
+=== Workflow 1: real data, speeds 40 km/h, 100 km/h, one drag model ===
+
+1. Data check: 25/25 checks passed
+2. Designs: 30 shapes x 2 speeds = 60 runs (0 failed left out); baseline, corners and 3 low-confidence designs always train
+   design box: windshield_angle_deg 22-34, spoiler_angle_deg 0-20, boat_tail_angle_deg 5-25, hood_angle_deg 5-15, ground_clearance_mm 110-190
+
+3. Pressure patterns (POD) per speed, on all designs:
+   40 km/h: 15 patterns explain 96.0%; face integral of the TRUE fields vs Cd label: mean 0.83, worst 10.12 drag counts
+   100 km/h: 15 patterns explain 96.5%; face integral of the TRUE fields vs Cd label: mean 0.68, worst 7.20 drag counts
+
+4. Cross-validation by design: 4 groups x 3 repeats; every testable design is the exam once per repeat, hidden at every speed
+   running 12 folds (2 parallel workers)

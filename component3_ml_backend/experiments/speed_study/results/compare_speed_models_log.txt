@@ -1,0 +1,23 @@
+   running 12 folds (both speeds each), 2 workers
+[Parallel(n_jobs=2)]: Using backend LokyBackend with 2 concurrent workers.
+[Parallel(n_jobs=2)]: Done  12 out of  12 | elapsed:  8.1min finished
+
+=== One model per speed vs one model with speed as input: error on held-out REAL designs, drag counts ===
+
+   40 km/h                    separate         combined
+   xgboost+aug              9.7 +/- 1.1      9.8 +/- 1.4
+   xgboost+real            18.2 +/- 2.0     18.3 +/- 2.2
+   random_forest+aug       10.3 +/- 1.3     10.1 +/- 1.5  <- combined better
+   random_forest+real      16.1 +/- 1.0     16.3 +/- 2.3
+   ann_mlp+aug             10.1 +/- 1.9     10.2 +/- 1.9
+   ann_mlp+real            10.1 +/- 1.0     10.6 +/- 0.7
+
+   100 km/h                    separate         combined
+   xgboost+aug              9.1 +/- 1.5      8.8 +/- 1.4  <- combined better
+   xgboost+real            17.2 +/- 1.2     18.2 +/- 1.8
+   random_forest+aug        9.6 +/- 1.7      9.2 +/- 1.4  <- combined better
+   random_forest+real      14.8 +/- 0.2     15.9 +/- 1.5
+   ann_mlp+aug              9.3 +/- 1.9      8.7 +/- 1.9  <- combined better
+   ann_mlp+real            10.8 +/- 0.4      9.8 +/- 0.2  <- combined better
+
+   best at 40 km/h: separate:xgboost+aug 9.7; at 100 km/h: combined:ann_mlp+aug 8.7

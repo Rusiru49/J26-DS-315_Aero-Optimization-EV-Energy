@@ -133,12 +133,13 @@ def load_model(path):
     return joblib.load(path)
 
 
-def predict_cd(model, params):
-    """Convenience: shape params dict -> predicted Cd from the deployed
-    surrogate (NOT the internal POD/GP path — this is the final, deployed
-    model used by the optimiser and the API)."""
-    x = np.array([[params[name] for name in config.SHAPE_PARAM_NAMES]], dtype=np.float64)
-    return float(model.predict(x)[0])
+def predict_cd(model, params, speed_kmh=None):
+    """Convenience: shape params dict (+ speed) -> predicted Cd from the deployed
+    surrogate (NOT the internal POD/GP path - this is the final, deployed model
+    used by the optimiser and the API). Workflow 1's model takes the speed in
+    km/h as a 6th input (models/<dataset>/model_card.json lists the inputs)."""
+    row = [params[name] for name in config.SHAPE_PARAM_NAMES] + ([] if speed_kmh is None else [speed_kmh])
+    return float(model.predict(np.array([row], dtype=np.float64))[0])
 
 
 # ------------------------------------------------------------------ #
