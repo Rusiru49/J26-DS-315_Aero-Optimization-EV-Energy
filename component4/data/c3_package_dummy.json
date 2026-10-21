@@ -1,0 +1,254 @@
+{
+  "package_version": "0.1-dummy",
+  "generated_on": "2026-10-21",
+  "status": "draft",
+  "evs": [
+    {
+      "ev_id": "EV01",
+      "ev_model": "Sedan (dummy, BYD Seal-based body)",
+      "mass_kg": 2000,
+      "usable_battery_kwh": 80.0,
+      "configurations": [
+        {
+          "config_id": "EV01_BASE",
+          "type": "baseline",
+          "optimized_from": null,
+          "frontal_area_m2": 2.3,
+          "cd": 0.23,
+          "cd_uncertainty": 0.002,
+          "shape_parameters": {
+            "windshield_angle_deg": 28,
+            "hood_angle_deg": 10,
+            "spoiler_angle_deg": 10,
+            "boat_tail_angle_deg": 15,
+            "ground_clearance_mm": 150
+          },
+          "geometry_file": "EV01_BASE.glb"
+        },
+        {
+          "config_id": "EV01_OPT1",
+          "type": "optimized",
+          "optimized_from": "EV01_BASE",
+          "frontal_area_m2": 2.28,
+          "cd": 0.208,
+          "cd_uncertainty": 0.004,
+          "shape_parameters": {
+            "windshield_angle_deg": 25,
+            "hood_angle_deg": 8,
+            "spoiler_angle_deg": 14,
+            "boat_tail_angle_deg": 19,
+            "ground_clearance_mm": 130
+          },
+          "geometry_file": "EV01_OPT1.glb"
+        }
+      ]
+    }
+  ],
+  "shape_parameter_definitions": [
+    {
+      "name": "windshield_angle_deg",
+      "description": "Windscreen glass angle, measured from horizontal; a lower value means a more sloped windscreen",
+      "unit": "deg",
+      "min": 22,
+      "max": 34,
+      "baseline": 28,
+      "effect_on_geometry": "Windscreen glass angle, measured from horizontal; a lower value means a more sloped windscreen"
+    },
+    {
+      "name": "hood_angle_deg",
+      "description": "Bonnet (hood) slope, measured from horizontal",
+      "unit": "deg",
+      "min": 5,
+      "max": 15,
+      "baseline": 10,
+      "effect_on_geometry": "Bonnet (hood) slope, measured from horizontal"
+    },
+    {
+      "name": "spoiler_angle_deg",
+      "description": "Rear spoiler plate pitch, measured from horizontal; 0 means flush with the body",
+      "unit": "deg",
+      "min": 0,
+      "max": 20,
+      "baseline": 10,
+      "effect_on_geometry": "Rear spoiler plate pitch, measured from horizontal; 0 means flush with the body"
+    },
+    {
+      "name": "boat_tail_angle_deg",
+      "description": "Taper of the rear body, measured from horizontal; a higher value means the rear narrows more towards the back",
+      "unit": "deg",
+      "min": 5,
+      "max": 25,
+      "baseline": 15,
+      "effect_on_geometry": "Taper of the rear body, measured from horizontal; a higher value means the rear narrows more towards the back"
+    },
+    {
+      "name": "ground_clearance_mm",
+      "description": "Vertical gap from the ground to the lowest point of the underbody",
+      "unit": "mm",
+      "min": 110,
+      "max": 190,
+      "baseline": 150,
+      "effect_on_geometry": "Vertical gap from the ground to the lowest point of the underbody"
+    }
+  ],
+  "conditions": [
+    {
+      "condition_id": "WLTP",
+      "group": "standard",
+      "avg_speed_kmh": 46.5,
+      "max_speed_kmh": 131.3,
+      "idle_fraction": 0.13,
+      "distance_km": 23.27
+    },
+    {
+      "condition_id": "SLDC_Urban",
+      "group": "sldc",
+      "avg_speed_kmh": 21.8,
+      "max_speed_kmh": 58.0,
+      "idle_fraction": 0.24,
+      "distance_km": 9.6
+    },
+    {
+      "condition_id": "SLDC_Suburban",
+      "group": "sldc",
+      "avg_speed_kmh": null,
+      "max_speed_kmh": null,
+      "idle_fraction": null,
+      "distance_km": null
+    },
+    {
+      "condition_id": "SLDC_Intercity",
+      "group": "sldc",
+      "avg_speed_kmh": null,
+      "max_speed_kmh": null,
+      "idle_fraction": null,
+      "distance_km": null
+    },
+    {
+      "condition_id": "SLDC_Expressway",
+      "group": "sldc",
+      "avg_speed_kmh": 94.5,
+      "max_speed_kmh": 118.0,
+      "idle_fraction": 0.01,
+      "distance_km": 26.4
+    },
+    {
+      "condition_id": "SLDC_Rural",
+      "group": "sldc",
+      "avg_speed_kmh": null,
+      "max_speed_kmh": null,
+      "idle_fraction": null,
+      "distance_km": null
+    }
+  ],
+  "results": [
+    {
+      "ev_id": "EV01",
+      "config_id": "EV01_BASE",
+      "condition_id": "WLTP",
+      "energy_wh_per_km": 152.0,
+      "range_km": 526.3,
+      "cost_lkr_per_100km": 760.0
+    },
+    {
+      "ev_id": "EV01",
+      "config_id": "EV01_OPT1",
+      "condition_id": "WLTP",
+      "energy_wh_per_km": 146.0,
+      "range_km": 547.9,
+      "cost_lkr_per_100km": 730.0
+    },
+    {
+      "ev_id": "EV01",
+      "config_id": "EV01_BASE",
+      "condition_id": "SLDC_Urban",
+      "energy_wh_per_km": 138.0,
+      "range_km": 579.7,
+      "cost_lkr_per_100km": 690.0
+    },
+    {
+      "ev_id": "EV01",
+      "config_id": "EV01_OPT1",
+      "condition_id": "SLDC_Urban",
+      "energy_wh_per_km": 134.1,
+      "range_km": 596.6,
+      "cost_lkr_per_100km": 670.5
+    },
+    {
+      "ev_id": "EV01",
+      "config_id": "EV01_BASE",
+      "condition_id": "SLDC_Expressway",
+      "energy_wh_per_km": 205.0,
+      "range_km": 390.2,
+      "cost_lkr_per_100km": 1025.0
+    },
+    {
+      "ev_id": "EV01",
+      "config_id": "EV01_OPT1",
+      "condition_id": "SLDC_Expressway",
+      "energy_wh_per_km": 192.7,
+      "range_km": 415.2,
+      "cost_lkr_per_100km": 963.5
+    }
+  ],
+  "comparisons": [
+    {
+      "ev_id": "EV01",
+      "baseline_config_id": "EV01_BASE",
+      "optimized_config_id": "EV01_OPT1",
+      "condition_id": "WLTP",
+      "energy_saving_wh_per_km": 6.0,
+      "energy_saving_pct": 3.95,
+      "range_gain_km": 21.6,
+      "cost_saving_lkr_per_100km": 30.0,
+      "saving_within_uncertainty": false
+    },
+    {
+      "ev_id": "EV01",
+      "baseline_config_id": "EV01_BASE",
+      "optimized_config_id": "EV01_OPT1",
+      "condition_id": "SLDC_Urban",
+      "energy_saving_wh_per_km": 3.9,
+      "energy_saving_pct": 2.83,
+      "range_gain_km": 16.9,
+      "cost_saving_lkr_per_100km": 19.5,
+      "saving_within_uncertainty": false
+    },
+    {
+      "ev_id": "EV01",
+      "baseline_config_id": "EV01_BASE",
+      "optimized_config_id": "EV01_OPT1",
+      "condition_id": "SLDC_Expressway",
+      "energy_saving_wh_per_km": 12.3,
+      "energy_saving_pct": 6.0,
+      "range_gain_km": 25.0,
+      "cost_saving_lkr_per_100km": 61.5,
+      "saving_within_uncertainty": false
+    }
+  ],
+  "model_notes": {
+    "is_dummy": true,
+    "data_origin": "DUMMY - generated by scripts/generate_dummy_data.py (not real C3 results)",
+    "energy_definition": "Energy taken from the battery per km over the full cycle, including drivetrain losses (dummy).",
+    "range_definition": "usable_battery_kwh x 1000 / energy_wh_per_km",
+    "includes_regen_braking": true,
+    "includes_auxiliary_load": false,
+    "road_gradient": "flat",
+    "cd_source": "CFD, 100 km/h, time-averaged (dummy)",
+    "optimized_cd_method": "baseline Cd + predicted change",
+    "tariff_lkr_per_kwh": 45.0,
+    "tariff_source": "placeholder - real CEB tariff and source to be confirmed",
+    "charging_efficiency": 0.9,
+    "experimentally_validated": false
+  },
+  "units": {
+    "mass_kg": "kg",
+    "usable_battery_kwh": "kWh",
+    "frontal_area_m2": "m2",
+    "cd": "dimensionless",
+    "energy_wh_per_km": "Wh/km",
+    "range_km": "km",
+    "cost_lkr_per_100km": "LKR/100km",
+    "idle_fraction": "fraction 0-1"
+  }
+}
