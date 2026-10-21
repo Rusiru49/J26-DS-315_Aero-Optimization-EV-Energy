@@ -1,0 +1,33 @@
+{
+  "speed_kmh": 40,
+  "mae_counts": {
+    "A_true_field_true_geometry": 0.08990002646249515,
+    "B_15_patterns_true_geometry": 8.21356427052193,
+    "C_true_amounts_predicted_geometry": 12.06567146283219,
+    "D_true_amounts_ridge": 7.418812070170227,
+    "E_helper_exact": 15.86800748109702,
+    "F_helper_ridge": 13.131537128787512,
+    "ref_gp_on_cd": 7.9924746281597425,
+    "ref_linear_on_cd": 9.11247121888349
+  },
+  "low_drag_signed_error": 17.654175932036313,
+  "rest_signed_error": -0.02516080094993811,
+  "corr_signed_error_vs_cd": -0.9212339341162438,
+  "amount_error_by_pattern": {
+    "mode1": 0.116,
+    "mode2": 0.287,
+    "mode3": 0.667,
+    "mode4": 0.804,
+    "mode5": 0.715,
+    "mode6": 0.63,
+    "mode7": 0.673,
+    "mode8": 0.745,
+    "mode9": 0.97,
+    "mode10": 0.763,
+    "mode11": 0.796,
+    "mode12": 0.683,
+    "mode13": 0.821,
+    "mode14": 0.965,
+    "mode15": 1.099
+  }
+}

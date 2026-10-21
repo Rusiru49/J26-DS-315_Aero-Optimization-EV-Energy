@@ -30,7 +30,7 @@ component3_ml_backend/
 ├── experiments/               research tests, kept apart from the product code
 │   ├── drivaerml/             tests on the public DrivAerML CFD data (CC BY-SA 4.0)
 │   └── cfd2d_standin/         2D OpenFOAM stand-in in Member 2's format (Google Colab notebook)
-├── tests/                     pytest (60 tests)
+├── tests/                     pytest (63 tests)
 ├── docs/research_papers/      papers used in the proposal
 ├── data/                      datasets used (in git): placeholder_sedan, cfd2d_sedan, scale_test_sedan
 ├── models/                    trained drag and frontal-area models, one folder per dataset and speed
@@ -58,6 +58,7 @@ All commands from this folder, with the venv's Python:
 | Energy model on the 5 driving cycles | `python scripts/run_workflow2_demo.py` |
 | Predicted vs real pressure figure | `python scripts/plot_pressure_prediction.py <folder>` |
 | Size test at Member 2's file size | `python scripts/scale_test.py` |
+| PP1 figures (from saved results) | `python scripts/make_pp1_figures.py` |
 | Tests | `python -m pytest tests` |
 
 Example on the 2D CFD stand-in: `python scripts/run_workflow1.py data/cfd2d_sedan 100`
@@ -78,7 +79,7 @@ With about 20 designs, a single hold-out of 4 designs is too noisy to trust. So 
 - this is repeated 3 times with new groups (`config.N_CV_FOLDS`, `config.N_CV_REPEATS`);
 - every candidate is scored on **real CFD designs only**, never on synthetic shapes.
 
-The candidates are XGBoost, Random Forest and ANN, each trained with the 1,200 physics-labelled shapes and on the real designs only. **The lowest cross-validated error wins**, so augmentation is used exactly when it helps. The winner is then retrained on all designs, and its cross-validated error is the uncertainty given with it. A diagnostic also scores the augmented models on synthetic shapes they never saw: if that error is small while the real-design error is large, the helper (labeller) is the weak link.
+The candidates are XGBoost, Random Forest and ANN, each trained with the 1,200 physics-labelled shapes and on the real designs only, plus two ANN variants that stop the few real designs being drowned by the synthetic ones: real rows weighted to half the say, and pre-train on all rows then fine-tune on the real ones. **The lowest cross-validated error wins**, so augmentation is used exactly when it helps. The winner is then retrained on all designs, and its cross-validated error is the uncertainty given with it. A diagnostic also scores the augmented models on synthetic shapes they never saw: if that error is small while the real-design error is large, the helper (labeller) is the weak link.
 - **All datasets used in this component are in git** (about 1.6 GB in total), so every result can be reproduced from the repo:
 
   | Folder | What it is | Size |
@@ -100,9 +101,10 @@ Workflow 1, the energy model and the optimiser are built and tested (60 tests).
 
 - **2D CFD stand-in:** physics-labelled augmentation lowered the drag-model error by 50-65%.
 - **Member 2's real data, PP1 delivery** (30 shapes x 2 speeds), cross-validated on the 22 testable designs (drag counts, 40 / 100 km/h):
-  - synthetic labels 14.0 / 13.0 off (16-18 with 24 shapes); the models learn them to within about 3-4 counts;
-  - augmentation now beats real-only training for XGBoost (3/3 repeats at both speeds) and Random Forest (3/3, 2/3);
-  - the ANN trained on the real designs only is still best (10.1 / 10.8), with the augmented ANN close at 100 km/h (11.7), so the pipeline chose the real-only ANN at both speeds;
-  - the gap closed as the data grew from 24 to 30 shapes; re-run when the full set arrives.
+  - a helper study (`experiments/helper_study/`) found where the labeller loses accuracy: patterns beyond the first two cannot be predicted from 30 shapes and pulled extreme shapes toward the average. Choosing the number of patterns by cross-validation (version H3, mostly 2 patterns) won at both speeds among 5 versions fixed in advance, and is now part of Workflow 1;
+  - with it the labels are 9.8 / 8.8 off (14.0 / 13.0 before), and **augmentation beats training on the real designs alone for every model**: XGBoost 9.7 / 9.1 vs 18.2 / 17.2, Random Forest 10.3 / 9.6 vs 16.1 / 14.8, ANN 10.1 / 9.3 vs 10.1 / 10.8;
+  - the pipeline now chooses **XGBoost + physics-labelled augmentation** at both speeds (expected error about 9-10 drag counts, about 2.5%);
+  - remaining limit: about 6 counts are lost because 30 shapes cannot describe every new shape's pressure; more shapes are needed for that part;
+  - PP1 figures: `python scripts/make_pp1_figures.py` writes `outputs/figures/pp1_fig*.png`; run logs are in `outputs/logs/`.
 
 Still to do: the FastAPI service for Component 4.

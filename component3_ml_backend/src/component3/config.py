@@ -131,7 +131,12 @@ REAL_DATA_DIR = os.path.join(COMPONENT_ROOT, "data", "member2_sedan_pp1")
 # POD / AUGMENTATION / SURROGATE
 # ------------------------------------------------------------------ #
 HOLDOUT_FRACTION = 0.18             # single hold-out split (loader); Workflow 1 itself uses cross-validation
-N_POD_MODES = 15
+N_POD_MODES = 15                    # most pressure patterns the helper may keep
+# The helper keeps only as many patterns as it can predict from the shape: the
+# number is chosen per dataset (and inside every cross-validation fold) from this
+# grid, by cross-validation on the training designs. On Member 2's 30 shapes it
+# mostly keeps 2 (experiments/helper_study, version H3, chosen 2026-10-21).
+POD_MODE_GRID = (2, 4, 6, 8, 10, 15)
 N_SYNTHETIC_SHAPES = 1200           # generator/LHS-proposed shapes to label
 
 # ------------------------------------------------------------------ #

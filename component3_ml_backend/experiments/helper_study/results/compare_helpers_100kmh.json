@@ -1,0 +1,133 @@
+{
+  "speed_kmh": 100,
+  "table": [
+    {
+      "helper": "H0",
+      "label": [
+        12.7,
+        2.0
+      ],
+      "low_drag_bias": 20.2,
+      "xgboost": [
+        12.8,
+        2.2
+      ],
+      "random_forest": [
+        12.7,
+        2.3
+      ],
+      "ann_mlp": [
+        11.4,
+        1.9
+      ]
+    },
+    {
+      "helper": "H1",
+      "label": [
+        14.1,
+        2.2
+      ],
+      "low_drag_bias": 21.2,
+      "xgboost": [
+        13.6,
+        1.8
+      ],
+      "random_forest": [
+        12.7,
+        1.1
+      ],
+      "ann_mlp": [
+        12.1,
+        1.7
+      ]
+    },
+    {
+      "helper": "H3",
+      "label": [
+        8.8,
+        2.2
+      ],
+      "low_drag_bias": 12.1,
+      "xgboost": [
+        8.9,
+        1.6
+      ],
+      "random_forest": [
+        9.5,
+        1.7
+      ],
+      "ann_mlp": [
+        9.2,
+        1.9
+      ]
+    },
+    {
+      "helper": "H1+H3",
+      "label": [
+        10.4,
+        3.7
+      ],
+      "low_drag_bias": 10.7,
+      "xgboost": [
+        9.7,
+        2.0
+      ],
+      "random_forest": [
+        9.9,
+        2.0
+      ],
+      "ann_mlp": [
+        10.8,
+        2.8
+      ]
+    },
+    {
+      "helper": "H2",
+      "label": [
+        11.4,
+        4.0
+      ],
+      "low_drag_bias": 10.7,
+      "xgboost": [
+        11.6,
+        3.2
+      ],
+      "random_forest": [
+        11.3,
+        2.8
+      ],
+      "ann_mlp": [
+        12.0,
+        3.4
+      ]
+    }
+  ],
+  "real_only": {
+    "xgboost": [
+      17.2,
+      1.2
+    ],
+    "random_forest": [
+      14.8,
+      0.2
+    ],
+    "ann_mlp": [
+      10.8,
+      0.4
+    ]
+  },
+  "patterns_chosen": {
+    "H3_modes": {
+      "2": 9,
+      "4": 2,
+      "10": 1
+    },
+    "H1+H3_modes": {
+      "2": 8,
+      "4": 1,
+      "6": 1,
+      "8": 1,
+      "10": 1
+    }
+  }
+}

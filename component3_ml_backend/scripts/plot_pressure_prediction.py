@@ -26,8 +26,8 @@ def main():
     source = sys.argv[1] if len(sys.argv) > 1 else os.path.join(config.COMPONENT_ROOT, "data", "cfd2d_sedan")
     speed = int(sys.argv[2]) if len(sys.argv) > 2 else 100
     ds = load_cfd_dataset(source, speed)
-    pod = fit_pod(ds)
-    (kind, method), _ = select_labeller(ds)
+    (kind, method, n_modes), _ = select_labeller(ds)
+    pod = fit_pod(ds, n_modes)
     gp = train_helper_gp(ds, pod, kind)
     hold = ds.holdout_runs().sort_values("Cd")
     picks = [hold.iloc[0], hold.iloc[len(hold) // 2], hold.iloc[-1]]

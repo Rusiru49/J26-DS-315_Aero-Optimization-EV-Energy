@@ -11,7 +11,11 @@ hold-out of 4 designs is too noisy to trust; this uses every design.
 Inside each fold the full build runs on the training designs only: choose the
 labeller (inner cross-validation), POD, helper, 1,200 physics-labelled shapes,
 then XGBoost / Random Forest / ANN trained twice, WITH the synthetic shapes and
-on the real designs ONLY. Every candidate is scored on real CFD designs only.
+on the real designs ONLY. Two more ANN candidates keep the 22 or so real
+designs from being drowned by 1,200 synthetic ones (added 2026-10-21, settings
+fixed before testing): "aug_weighted" gives real and synthetic rows half the say
+each; "pretrain_finetune" learns from real + synthetic, then keeps training on
+the real designs only. Every candidate is scored on real CFD designs only.
 
 Model choice (the rule that replaces a fixed label-check limit): the candidate
 with the lowest cross-validated error wins, so augmentation is used exactly
@@ -30,7 +34,7 @@ from component3 import config
 from component3.workflow1.augmentation import propose_shapes
 from component3.workflow1.helper import fit_helper, label_shapes, select_labeller_arrays
 from component3.workflow1.pod import dataset_arrays, fit_pod_arrays
-from component3.workflow1.training import AREA_CANDIDATE_BUILDERS, CANDIDATE_BUILDERS
+from component3.workflow1.training import AREA_CANDIDATE_BUILDERS, CANDIDATE_BUILDERS, FineTunedANN, real_weights
 
 N_DIAGNOSTIC_SHAPES = 300   # synthetic shapes kept out of training, for the diagnostic only
 
@@ -54,11 +58,13 @@ def _shapes_table(shapes):
 
 def build_labeller(a):
     """Choose the labeller on the given training arrays (inner cross-validation),
-    then fit POD + helper on all of them. Returns (pod, helper, kind, method)."""
-    (kind, method), _ = select_labeller_arrays(a)
-    pod = fit_pod_arrays(a)
+    then fit POD (with the chosen number of patterns) + helper on all of them.
+    Returns (pod, helper, choice) with choice = (kind, method, n_patterns)."""
+    choice, _ = select_labeller_arrays(a)
+    kind, _, n_modes = choice
+    pod = fit_pod_arrays(a, n_modes)
     amps = (a["fields"] - pod.mean_field) @ pod.mode_shapes.T
-    return pod, fit_helper(a["x_unit"], amps, kind), kind, method
+    return pod, fit_helper(a["x_unit"], amps, kind), choice
 
 
 def augmented_table(a, pod, helper, method, seed):
@@ -81,8 +87,8 @@ def run_fold(a, train_idx, test_idx, seed, settings=None):
         N_DIAGNOSTIC_SHAPES = settings["n_diagnostic"]
     tr = {k: v[train_idx] for k, v in a.items()}
     x_test, y_test = a["x_raw"][test_idx], a["cd"][test_idx]
-    pod, helper, kind, method = build_labeller(tr)
-    out = {"kind": kind, "method": method, "pred": {}}
+    pod, helper, (kind, method, n_modes) = build_labeller(tr)
+    out = {"choice": f"{kind}+{method}, {n_modes} patterns", "pred": {}}
     out["label"] = label_shapes(helper, pod, [dict(zip(config.SHAPE_PARAM_NAMES, r)) for r in x_test], method)
 
     x_aug, y_aug = augmented_table(tr, pod, helper, method, seed)
@@ -94,6 +100,11 @@ def run_fold(a, train_idx, test_idx, seed, settings=None):
         out["pred"][f"{name}+aug"] = model.predict(x_test)
         out["diag"][name] = float(np.mean(np.abs(model.predict(x_diag) - y_diag)))
         out["pred"][f"{name}+real"] = build().fit(tr["x_raw"], tr["cd"]).predict(x_test)
+    n_real = len(tr["cd"])
+    weights = real_weights(n_real, len(y_aug) - n_real)
+    ann_weighted = CANDIDATE_BUILDERS["ann_mlp"]().fit(x_aug, y_aug, mlpregressor__sample_weight=weights)
+    out["pred"]["ann_mlp+aug_weighted"] = ann_weighted.predict(x_test)
+    out["pred"]["ann_mlp+pretrain_finetune"] = FineTunedANN().fit(x_aug, y_aug, tr["x_raw"], tr["cd"]).predict(x_test)
     for name, build in AREA_CANDIDATE_BUILDERS.items():
         out["pred"][f"area:{name}"] = build().fit(tr["x_raw"], tr["aref"]).predict(x_test)
     out["truth"], out["truth_area"] = y_test, a["aref"][test_idx]
@@ -132,7 +143,7 @@ def cross_validate(ds, n_folds=None, n_repeats=None, progress=print, n_jobs=None
             folds = Parallel(n_jobs=n_jobs)(delayed(run_fold)(a, tr, te, seed, _settings()) for _, _, te, tr, seed in jobs)
     records, choices = [], []
     for (rep, f, test_idx, _, _), fold in zip(jobs, folds):
-        choices.append(f"{fold['kind']}+{fold['method']}")
+        choices.append(fold["choice"])
         for i, idx in enumerate(test_idx):
             rec = {"repeat": rep, "fold": f, "run_id": ids[idx], "cd": fold["truth"][i],
                    "area": fold["truth_area"][i], "label": fold["label"][i]}
@@ -142,11 +153,16 @@ def cross_validate(ds, n_folds=None, n_repeats=None, progress=print, n_jobs=None
     return {"oof": pd.DataFrame(records), "labeller_choices": choices, "n_folds": n_folds, "n_repeats": n_repeats}
 
 
+def candidate_columns(oof):
+    """Columns holding a drag-model candidate's predictions, e.g. "xgboost+aug"."""
+    return [c for c in oof.columns if "+" in c and not c.startswith(("area:", "diag:"))]
+
+
 def summarise(cv):
     """Error table (Cd units) of every candidate: mean absolute error per repeat,
     then mean and spread over repeats, RMSE, worst design."""
     oof = cv["oof"]
-    cols = [c for c in oof.columns if c.endswith("+aug") or c.endswith("+real")]
+    cols = candidate_columns(oof)
     rows = []
     for c in cols + ["label"]:
         err = (oof[c] - oof["cd"]).abs()
@@ -171,18 +187,22 @@ def augmentation_wins(cv, model_name):
 
 
 def train_final(ds, candidate, seed=config.RANDOM_STATE):
-    """Retrain the chosen candidate ("<model>+aug" or "<model>+real") on ALL designs.
+    """Retrain the chosen candidate ("<model>+<variant>") on ALL designs.
     Returns (model, info)."""
     name, variant = candidate.split("+")
     runs = ds.runs.reset_index(drop=True)
     a = dataset_arrays(ds, runs)
-    info = {"model": name, "uses_augmentation": variant == "aug", "n_designs": len(runs)}
-    if variant == "aug":
-        pod, helper, kind, method = build_labeller(a)
-        x, y = augmented_table(a, pod, helper, method, seed)
-        info.update(labeller=f"{kind}+{method}", n_synthetic=config.N_SYNTHETIC_SHAPES)
-    else:
-        x, y = a["x_raw"], a["cd"]
+    info = {"model": name, "variant": variant, "uses_augmentation": variant != "real", "n_designs": len(runs)}
+    if variant == "real":
+        return CANDIDATE_BUILDERS[name]().fit(a["x_raw"], a["cd"]), info
+    pod, helper, (kind, method, n_modes) = build_labeller(a)
+    x, y = augmented_table(a, pod, helper, method, seed)
+    info.update(labeller=f"{kind}+{method}", n_patterns=n_modes, n_synthetic=config.N_SYNTHETIC_SHAPES)
+    if variant == "pretrain_finetune":
+        return FineTunedANN().fit(x, y, a["x_raw"], a["cd"]), info
+    if variant == "aug_weighted":
+        weights = real_weights(len(a["cd"]), len(y) - len(a["cd"]))
+        return CANDIDATE_BUILDERS[name]().fit(x, y, mlpregressor__sample_weight=weights), info
     return CANDIDATE_BUILDERS[name]().fit(x, y), info
 
 

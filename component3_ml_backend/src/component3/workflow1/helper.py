@@ -80,32 +80,46 @@ def train_helper_gp(cfd_dataset, pod_model, kind=None):
 
 def select_labeller(cfd_dataset, n_folds=5):
     """
-    Choose the helper kind and the amounts -> Cd method by k-fold cross-
-    validation on the TRAINING designs only (the hold-out designs are never
-    used), so each dataset - the dummy, the 2D CFD stand-in or Member 2's real
-    data - picks what works best for it. Returns ((kind, method), table) where
-    table maps (kind, method) -> mean absolute Cd error.
+    Choose the helper kind, the amounts -> Cd method AND the number of pressure
+    patterns by k-fold cross-validation on the TRAINING designs only (the
+    hold-out designs are never used), so each dataset - the dummy, the 2D CFD
+    stand-in or Member 2's real data - picks what works best for it. Returns
+    ((kind, method, n_modes), table) where table maps that triple -> mean
+    absolute Cd error.
+
+    Keeping only the patterns the helper can actually predict from the shape
+    matters: on Member 2's data patterns beyond the first two were mostly noise
+    that pulled extreme shapes toward the average (experiments/helper_study).
     """
     from component3.workflow1.pod import dataset_arrays
     return select_labeller_arrays(dataset_arrays(cfd_dataset, cfd_dataset.real_runs()), n_folds)
 
 
-def select_labeller_arrays(a, n_folds=5):
-    """select_labeller() on arrays already loaded (workflow1.pod.dataset_arrays)."""
+def select_labeller_arrays(a, n_folds=5, mode_grid=None):
+    """select_labeller() on arrays already loaded (workflow1.pod.dataset_arrays).
+    The per-pattern GPs do not depend on how many patterns are kept, so they are
+    fitted once per fold and sliced; the POD ridge and the shared GP are refitted
+    for each pattern count."""
     from sklearn.model_selection import KFold
     from component3.workflow1.pod import fit_pod_arrays
+    grid = sorted(m for m in (mode_grid or config.POD_MODE_GRID) if m <= config.N_POD_MODES)
     n = len(a["cd"])
     n_folds = min(n_folds, n)
     errors = {}
     for tr, te in KFold(n_folds, shuffle=True, random_state=config.RANDOM_STATE).split(np.arange(n)):
         sub = {k: v[tr] for k, v in a.items()}
-        pod = fit_pod_arrays(sub)
-        amps = (sub["fields"] - pod.mean_field) @ pod.mode_shapes.T
-        for kind in ("per_mode", "shared"):
-            pred = fit_helper(sub["x_unit"], amps, kind).predict(a["x_unit"][te])
-            for method in ("exact", "ridge"):
-                err = np.abs(pod.cd_batch(pred, a["x_unit"][te], method) - a["cd"][te])
-                errors.setdefault((kind, method), []).append(err)
+        x_te = a["x_unit"][te]
+        pods = {m: fit_pod_arrays(sub, m) for m in grid}
+        full = pods[grid[-1]]
+        amps = (sub["fields"] - full.mean_field) @ full.mode_shapes.T
+        per_mode = fit_helper(sub["x_unit"], amps, "per_mode").predict(x_te)
+        for m, pod in pods.items():
+            k = pod.mode_shapes.shape[0]
+            preds = {"per_mode": per_mode[:, :k], "shared": fit_helper(sub["x_unit"], amps[:, :k], "shared").predict(x_te)}
+            for kind, pred in preds.items():
+                for method in ("exact", "ridge"):
+                    err = np.abs(pod.cd_batch(pred, x_te, method) - a["cd"][te])
+                    errors.setdefault((kind, method, m), []).append(err)
     table = {k: float(np.concatenate(v).mean()) for k, v in errors.items()}
     return min(table, key=table.get), table
 

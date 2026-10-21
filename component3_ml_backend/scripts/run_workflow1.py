@@ -82,6 +82,9 @@ def main():
         print(f"   {m:14s} with augmentation {ra.mae * COUNTS:6.1f} +/- {ra.mae_spread * COUNTS:4.1f}   "
               f"real only {rr.mae * COUNTS:6.1f} +/- {rr.mae_spread * COUNTS:4.1f}   "
               f"(augmentation better in {wins}/{n} repeats)")
+    for c in ("ann_mlp+aug_weighted", "ann_mlp+pretrain_finetune"):
+        r = table.loc[c]
+        print(f"   {c:26s} {r.mae * COUNTS:6.1f} +/- {r.mae_spread * COUNTS:4.1f}   worst {r.worst * COUNTS:5.1f}")
     print("   diagnostic - augmented models vs synthetic shapes they never saw (how well they learned the helper):")
     print("   " + ", ".join(f"{m} {v * COUNTS:.1f}" for m, v in diag.items()))
 
@@ -89,7 +92,7 @@ def main():
     winner = ranked.index[0]
     best = ranked.iloc[0]
     print(f"\n6. Chosen drag model: {winner} (lowest cross-validated error). "
-          f"Augmentation {'IS' if winner.endswith('+aug') else 'is NOT'} used for this dataset.")
+          f"Augmentation {'is NOT' if winner.endswith('+real') else 'IS'} used for this dataset.")
     model, info = train_final(dataset, winner)
     tag = os.path.basename(os.path.normpath(dataset.data_dir))
     model_dir = os.path.join(config.MODELS_DIR, f"{tag}_{speed}kmh")

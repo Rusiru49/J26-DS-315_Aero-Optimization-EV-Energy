@@ -33,7 +33,7 @@ def cv(small_ds, monkeypatch_module):
     monkeypatch_module.setattr(config, "N_SYNTHETIC_SHAPES", 150)
     monkeypatch_module.setattr(evaluation, "N_DIAGNOSTIC_SHAPES", 40)
     # the labeller choice has its own test (test_labeller.py); fix it here for speed
-    monkeypatch_module.setattr(evaluation, "select_labeller_arrays", lambda a, n_folds=5: (("per_mode", "ridge"), {}))
+    monkeypatch_module.setattr(evaluation, "select_labeller_arrays", lambda a, n_folds=5: (("per_mode", "ridge", 4), {}))
     return cross_validate(small_ds, n_folds=3, n_repeats=2, progress=lambda *_: None, n_jobs=1)
 
 
@@ -64,6 +64,7 @@ def test_every_testable_design_is_tested_once_per_repeat(small_ds, cv):
 def test_results_table_and_winner(cv):
     table, area_table, diag = summarise(cv)
     expected = {f"{m}+{v}" for m in ("xgboost", "random_forest", "ann_mlp") for v in ("aug", "real")} | {"label"}
+    expected |= {"ann_mlp+aug_weighted", "ann_mlp+pretrain_finetune"}
     assert set(table.index) == expected
     assert (table["mae"] >= 0).all() and set(diag) == {"xgboost", "random_forest", "ann_mlp"}
     oof = cv["oof"]
@@ -81,7 +82,7 @@ def test_parallel_folds_give_the_same_result(small_ds, cv):
     pd.testing.assert_series_equal(par["oof"]["random_forest+real"], ser["random_forest+real"])
     # the workers choose the labeller themselves (the fix above does not reach them);
     # where they chose the same one, the labels must match exactly
-    same = [c == "per_mode+ridge" for c in par["labeller_choices"]]
+    same = [c == "per_mode+ridge, 4 patterns" for c in par["labeller_choices"]]
     rows = par["oof"]["fold"].map(dict(enumerate(same)))
     assert np.allclose(par["oof"].loc[rows, "label"], ser.loc[rows, "label"])
 
@@ -91,3 +92,19 @@ def test_final_model_is_trained_on_all_designs(small_ds, monkeypatch_module):
     assert info["n_designs"] == len(small_ds.runs) and not info["uses_augmentation"]
     x = small_ds.runs[config.SHAPE_PARAM_NAMES].to_numpy(dtype=float)
     assert model.predict(x).shape == (len(x),)
+
+
+@pytest.mark.parametrize("variant", ["aug_weighted", "pretrain_finetune"])
+def test_final_ann_variants_train_and_predict(small_ds, monkeypatch_module, variant):
+    monkeypatch_module.setattr(config, "N_SYNTHETIC_SHAPES", 150)
+    monkeypatch_module.setattr(evaluation, "select_labeller_arrays", lambda a, n_folds=5: (("per_mode", "ridge", 4), {}))
+    model, info = train_final(small_ds, f"ann_mlp+{variant}")
+    assert info["uses_augmentation"] and info["variant"] == variant
+    x = small_ds.runs[config.SHAPE_PARAM_NAMES].to_numpy(dtype=float)
+    assert np.all(np.isfinite(model.predict(x)))
+
+
+def test_real_weights_give_each_side_half_the_say():
+    from component3.workflow1.training import real_weights
+    w = real_weights(20, 1200)
+    assert w[:20].sum() == pytest.approx(w[20:].sum())

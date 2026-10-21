@@ -46,6 +46,38 @@ CANDIDATE_BUILDERS = {
 }
 
 
+class FineTunedANN:
+    """The ANN for augmented data, pre-trained then fine-tuned: first it learns
+    the general shape -> Cd trend from the real + synthetic rows, then it keeps
+    training on the REAL rows only, with a 10x smaller learning rate for a fixed
+    number of passes, so the real CFD has the last word. The scalers come from
+    the pre-training data and stay fixed. Settings fixed before testing
+    (2026-10-21), not tuned to the results."""
+
+    FINE_TUNE_EPOCHS = 300
+    FINE_TUNE_LEARNING_RATE = 1e-4
+
+    def fit(self, x_pre, y_pre, x_real, y_real):
+        self.x_scaler = StandardScaler().fit(x_pre)
+        self.y_mean, self.y_std = float(np.mean(y_pre)), float(np.std(y_pre)) or 1.0
+        self.mlp = MLPRegressor(hidden_layer_sizes=(32, 16), activation="relu", max_iter=5000,
+                                random_state=config.RANDOM_STATE, warm_start=True)
+        self.mlp.fit(self.x_scaler.transform(x_pre), (y_pre - self.y_mean) / self.y_std)
+        self.mlp.set_params(max_iter=self.FINE_TUNE_EPOCHS, learning_rate_init=self.FINE_TUNE_LEARNING_RATE)
+        self.mlp.fit(self.x_scaler.transform(x_real), (y_real - self.y_mean) / self.y_std)
+        return self
+
+    def predict(self, x):
+        return self.mlp.predict(self.x_scaler.transform(x)) * self.y_std + self.y_mean
+
+
+def real_weights(n_real, n_synthetic):
+    """Sample weights that give the real rows and the synthetic rows HALF the
+    say each in training (otherwise about 22 real rows vs 1,200 synthetic ones
+    is 2% vs 98%)."""
+    return np.concatenate([np.full(n_real, n_synthetic / max(n_real, 1)), np.ones(n_synthetic)])
+
+
 def _to_xy(df):
     x = df[config.SHAPE_PARAM_NAMES].to_numpy(dtype=np.float64)
     y = df["Cd"].to_numpy(dtype=np.float64)

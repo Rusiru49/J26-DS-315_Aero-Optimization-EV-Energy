@@ -1,0 +1,56 @@
+   repeat 1, fold 1 done
+   repeat 1, fold 2 done
+   repeat 1, fold 3 done
+   repeat 1, fold 4 done
+   repeat 2, fold 1 done
+   repeat 2, fold 2 done
+   repeat 2, fold 3 done
+   repeat 2, fold 4 done
+   repeat 3, fold 1 done
+   repeat 3, fold 2 done
+   repeat 3, fold 3 done
+   repeat 3, fold 4 done
+
+=== Helper diagnosis, 40 km/h: mean absolute error on held-out real designs (drag counts) ===
+   A_true_field_true_geometry              0.1
+   B_15_patterns_true_geometry             8.2
+   C_true_amounts_predicted_geometry      12.1
+   D_true_amounts_ridge                    7.4
+   E_helper_exact                         15.9
+   F_helper_ridge                         13.1
+   ref_gp_on_cd                            8.0
+   ref_linear_on_cd                        9.1
+
+   bias check (ridge helper): signed error on the 25% lowest-drag designs +17.7, on the rest -0.0; correlation of signed error with true Cd -0.92
+   (positive error on low-drag designs + negative correlation = the helper pulls extreme shapes toward the average)
+
+   pattern-amount prediction error (in units of that pattern's spread in training), first 8 patterns:
+   mode1 0.12, mode2 0.29, mode3 0.67, mode4 0.80, mode5 0.71, mode6 0.63, mode7 0.67, mode8 0.74
+   repeat 1, fold 1 done
+   repeat 1, fold 2 done
+   repeat 1, fold 3 done
+   repeat 1, fold 4 done
+   repeat 2, fold 1 done
+   repeat 2, fold 2 done
+   repeat 2, fold 3 done
+   repeat 2, fold 4 done
+   repeat 3, fold 1 done
+   repeat 3, fold 2 done
+   repeat 3, fold 3 done
+   repeat 3, fold 4 done
+
+=== Helper diagnosis, 100 km/h: mean absolute error on held-out real designs (drag counts) ===
+   A_true_field_true_geometry              0.1
+   B_15_patterns_true_geometry             7.2
+   C_true_amounts_predicted_geometry      11.6
+   D_true_amounts_ridge                    6.3
+   E_helper_exact                         17.7
+   F_helper_ridge                         12.6
+   ref_gp_on_cd                            7.6
+   ref_linear_on_cd                        8.2
+
+   bias check (ridge helper): signed error on the 25% lowest-drag designs +20.2, on the rest -0.3; correlation of signed error with true Cd -0.87
+   (positive error on low-drag designs + negative correlation = the helper pulls extreme shapes toward the average)
+
+   pattern-amount prediction error (in units of that pattern's spread in training), first 8 patterns:
+   mode1 0.10, mode2 0.28, mode3 0.67, mode4 0.83, mode5 0.87, mode6 0.56, mode7 0.69, mode8 0.77
