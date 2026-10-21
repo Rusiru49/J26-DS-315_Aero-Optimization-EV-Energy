@@ -10,8 +10,8 @@ It has two workflows:
 | | Workflow 1: build the drag model (offline) | Workflow 2: answer a request (live) |
 |---|---|---|
 | Input | Member 2's CFD runs (contract format) | 5 shape values, vehicle details, driving cycle |
-| Steps | data check → split by design → POD → physics labeller → label gate → 1,200 physics-labelled synthetic shapes → XGBoost / Random Forest / ANN → stability over 10 hold-out draws | drag model → energy model → Bayesian optimiser (Optuna) → "near-optimal" or "better shape found" |
-| Output | `models/drag_surrogate_*.joblib`, `models/frontal_area_model.joblib` | Wh/km, range, cost for the baseline and the best shape |
+| Steps | data check → POD → cross-validation by design (in each fold: physics labeller → 1,200 physics-labelled synthetic shapes → XGBoost / Random Forest / ANN, with and without augmentation, scored on real designs only) → pick the lowest-error model → retrain it on all designs | drag model → energy model → Bayesian optimiser (Optuna) → "near-optimal" or "better shape found" |
+| Output | `models/<dataset>_<speed>kmh/`: `drag_model.joblib`, `frontal_area_model.joblib`, `model_card.json` (model, design box, cross-validated error) | Wh/km, range, cost for the baseline and the best shape |
 
 ## Folder structure
 
@@ -22,17 +22,18 @@ component3_ml_backend/
 │   ├── data/                  loader.py (reads Member 2's format), checker.py (22 checks),
 │   │                          dummy_generator.py (dummy data in the same format)
 │   ├── workflow1/             pod.py (patterns + exact drag integration), helper.py (GP helper,
-│   │                          labeller choice by cross-validation), augmentation.py, training.py
+│   │                          labeller choice by cross-validation), augmentation.py, training.py,
+│   │                          evaluation.py (cross-validation by design, model choice)
 │   └── workflow2/             energy_model.py, optimizer.py
 ├── scripts/                   things you run: run_workflow1.py, check_dataset.py, make_dummy_data.py,
 │                              run_workflow2_demo.py, plot_pressure_prediction.py, scale_test.py
 ├── experiments/               research tests, kept apart from the product code
 │   ├── drivaerml/             tests on the public DrivAerML CFD data (CC BY-SA 4.0)
 │   └── cfd2d_standin/         2D OpenFOAM stand-in in Member 2's format (Google Colab notebook)
-├── tests/                     pytest (52 tests)
+├── tests/                     pytest (60 tests)
 ├── docs/research_papers/      papers used in the proposal
 ├── data/                      datasets used (in git): placeholder_sedan, cfd2d_sedan, scale_test_sedan
-├── models/                    trained drag and frontal-area models (in git; rebuilt by run_workflow1.py)
+├── models/                    trained drag and frontal-area models, one folder per dataset and speed
 └── outputs/                   small result summaries (JSON, figures)
 ```
 
@@ -53,13 +54,13 @@ All commands from this folder, with the venv's Python:
 |---|---|
 | Make the dummy dataset | `python scripts/make_dummy_data.py` |
 | Check a dataset folder | `python scripts/check_dataset.py <folder>` |
-| Build the drag model | `python scripts/run_workflow1.py <placeholder \| real \| folder> <speed_kmh> [gate_counts]` |
+| Build the drag model | `python scripts/run_workflow1.py <placeholder \| real \| folder> <speed_kmh>` |
 | Energy model on the 5 driving cycles | `python scripts/run_workflow2_demo.py` |
 | Predicted vs real pressure figure | `python scripts/plot_pressure_prediction.py <folder>` |
 | Size test at Member 2's file size | `python scripts/scale_test.py` |
 | Tests | `python -m pytest tests` |
 
-Example on the 2D CFD stand-in: `python scripts/run_workflow1.py data/cfd2d_sedan 100 15`
+Example on the 2D CFD stand-in: `python scripts/run_workflow1.py data/cfd2d_sedan 100`
 
 ## Data
 
@@ -69,6 +70,15 @@ Example on the 2D CFD stand-in: `python scripts/run_workflow1.py data/cfd2d_seda
   - **part deliveries:** designs listed in `design_table.csv` but not run yet are only a warning;
   - **design box:** a folder's own `parameter_ranges.csv` sets the box and baseline for the whole pipeline. The older test datasets carry the earlier guessed box this way.
 - **Trained models** are saved per dataset and speed, in `models/<dataset folder>_<speed>kmh/`.
+
+## How Workflow 1 tests itself
+
+With about 20 designs, a single hold-out of 4 designs is too noisy to trust. So Workflow 1 uses **cross-validation by design**:
+- the testable designs (not the baseline, the extreme corners or the low-confidence morphs) are cut into 4 groups, and each group is the exam once while everything else trains;
+- this is repeated 3 times with new groups (`config.N_CV_FOLDS`, `config.N_CV_REPEATS`);
+- every candidate is scored on **real CFD designs only**, never on synthetic shapes.
+
+The candidates are XGBoost, Random Forest and ANN, each trained with the 1,200 physics-labelled shapes and on the real designs only. **The lowest cross-validated error wins**, so augmentation is used exactly when it helps. The winner is then retrained on all designs, and its cross-validated error is the uncertainty given with it. A diagnostic also scores the augmented models on synthetic shapes they never saw: if that error is small while the real-design error is large, the helper (labeller) is the weak link.
 - **All datasets used in this component are in git** (about 1.5 GB in total), so every result can be reproduced from the repo:
 
   | Folder | What it is | Size |
@@ -85,4 +95,13 @@ Example on the 2D CFD stand-in: `python scripts/run_workflow1.py data/cfd2d_seda
 
 ## Status (October 2026)
 
-Workflow 1 and the energy model and optimiser are built and tested. On the 2D CFD stand-in, averaged over 10 hold-out draws, physics-labelled augmentation lowered the drag-model error by 50-65% (for example XGBoost 28.9 → 14.6 drag counts). These numbers come from 2D stand-in data, not Member 2's 3D runs. Still to do: the FastAPI service for Component 4.
+Workflow 1, the energy model and the optimiser are built and tested (60 tests).
+
+- **2D CFD stand-in:** physics-labelled augmentation lowered the drag-model error by 50-65%.
+- **Member 2's real data so far** (24 shapes x 2 speeds), cross-validated on the 17 testable designs:
+  - the synthetic labels are about 16-18 drag counts off, worst for the lowest-drag shapes (D061, D005);
+  - the models learn those labels to within about 3-4 counts, so the labeller is the weak link, not the drag models;
+  - at this data size augmentation does not beat the ANN trained on the real designs only (about 12 drag counts), so the pipeline chose the real-only ANN at both speeds;
+  - re-run when Member 2's further shapes arrive.
+
+Still to do: the FastAPI service for Component 4.

@@ -130,7 +130,7 @@ REAL_DATA_DIR = None
 # ------------------------------------------------------------------ #
 # POD / AUGMENTATION / SURROGATE
 # ------------------------------------------------------------------ #
-HOLDOUT_FRACTION = 0.18             # 15-20% of designs held out; split is by design
+HOLDOUT_FRACTION = 0.18             # single hold-out split (loader); Workflow 1 itself uses cross-validation
 N_POD_MODES = 15
 N_SYNTHETIC_SHAPES = 1200           # generator/LHS-proposed shapes to label
 
@@ -140,9 +140,10 @@ N_SYNTHETIC_SHAPES = 1200           # generator/LHS-proposed shapes to label
 OPTUNA_N_TRIALS = 100                # within the ~50-150 evaluation budget
 BASELINE_OPTIMAL_TOLERANCE = 0.02    # 2% — within this, report "already near-optimal"
 
-# Label check gate: the physics labels may only be used if the mean error on the
-# hold-out designs is below this (Cd units; 0.001 = 1 drag count). Placeholder
-# value, to be re-set once real data shows the noise level.
+# Old fixed label-check limit (Cd units; 0.001 = 1 drag count). Workflow 1 no
+# longer stops on it: the synthetic labels are used only if the augmented model
+# beats the real-only model in cross-validation (workflow1/evaluation.py). Kept
+# for the DrivAerML experiment script.
 LABEL_CHECK_MEAN_TOLERANCE = 0.006
 # How synthetic shapes get their drag label (workflow1/pod.py): "exact" = rebuild
 # the pressure field and integrate it over the predicted face geometry (the
@@ -154,6 +155,9 @@ LABEL_METHOD = "auto"
 # cross-validation on the training designs (helper_gp_model.select_labeller), so
 # the data, not the developer, decides.
 HELPER_KIND = "auto"
-# Workflow 1 repeats the whole build on this many different hold-out draws and
-# reports mean +/- spread (one split of ~12 test designs is too noisy to trust).
-N_REPEAT_SPLITS = 10
+# Workflow 1 tests itself by cross-validation by design (workflow1/evaluation.py):
+# the testable designs are cut into N_CV_FOLDS groups, each group is the exam
+# once, and the whole thing is repeated N_CV_REPEATS times with new groups.
+N_CV_FOLDS = 4
+N_CV_REPEATS = 3
+N_JOBS = 2                             # parallel worker processes for the folds (more ran an 8 GB laptop out of memory)

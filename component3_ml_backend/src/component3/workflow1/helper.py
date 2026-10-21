@@ -86,10 +86,16 @@ def select_labeller(cfd_dataset, n_folds=5):
     data - picks what works best for it. Returns ((kind, method), table) where
     table maps (kind, method) -> mean absolute Cd error.
     """
+    from component3.workflow1.pod import dataset_arrays
+    return select_labeller_arrays(dataset_arrays(cfd_dataset, cfd_dataset.real_runs()), n_folds)
+
+
+def select_labeller_arrays(a, n_folds=5):
+    """select_labeller() on arrays already loaded (workflow1.pod.dataset_arrays)."""
     from sklearn.model_selection import KFold
-    from component3.workflow1.pod import dataset_arrays, fit_pod_arrays
-    a = dataset_arrays(cfd_dataset, cfd_dataset.real_runs())
+    from component3.workflow1.pod import fit_pod_arrays
     n = len(a["cd"])
+    n_folds = min(n_folds, n)
     errors = {}
     for tr, te in KFold(n_folds, shuffle=True, random_state=config.RANDOM_STATE).split(np.arange(n)):
         sub = {k: v[tr] for k, v in a.items()}
