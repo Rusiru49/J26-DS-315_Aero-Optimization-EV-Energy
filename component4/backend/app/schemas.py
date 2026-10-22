@@ -17,7 +17,7 @@ class Configuration(_Base):
     config_id: str
     type: Literal["baseline", "optimized"]
     optimized_from: Optional[str] = None
-    optimized_for: Optional[str] = None   # the driving condition this design was made for
+    optimized_for: Optional[str] = None   # the driving condition this design was found for
     frontal_area_m2: float
     cd: float
     cd_uncertainty: Optional[float] = None
@@ -50,6 +50,9 @@ class Condition(_Base):
     max_speed_kmh: Optional[float] = None
     idle_fraction: Optional[float] = None
     distance_km: Optional[float] = None
+    # For a standard-cycle entry (group "standard", e.g. WLTP): the driving condition it is the
+    # benchmark of (e.g. "SLDC_Urban"). Empty = one benchmark for all conditions.
+    benchmark_of: Optional[str] = None
 
 
 class ModelNotes(_Base):

@@ -57,11 +57,10 @@ def get_comparison(ev_id: str, condition_id: str, optimized_config_id: Optional[
 # ---- Function 2 -------------------------------------------------------------
 @router.get("/conditions/compare")
 def conditions_compare(ev_id: str, conditions: Optional[str] = None,
-                       store: DataStore = Depends(get_store),
-                       settings: Settings = Depends(get_settings)):
+                       store: DataStore = Depends(get_store)):
     """`conditions` = comma-separated condition ids to compare (default: all that have results)."""
     ids = [c for c in conditions.split(",") if c] if conditions else None
-    return analysis.condition_comparison(store, ev_id, settings.benchmark_condition, ids)
+    return analysis.condition_comparison(store, ev_id, ids)
 
 
 @router.get("/sensitivity")

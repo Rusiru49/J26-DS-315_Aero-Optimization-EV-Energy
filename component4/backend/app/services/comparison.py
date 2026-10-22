@@ -43,7 +43,7 @@ def _shape_changes(store: DataStore, base, opt) -> list[dict]:
 
 def pick_design(store: DataStore, ev_id: str, condition_id: str,
                 optimized_config_id: Optional[str] = None):
-    """The optimized design to use: the one asked for; else the design made for this condition;
+    """The optimized design to use: the one asked for; else the design found for this condition;
     else (for example WLTP, which has no design of its own) the best overall design."""
     if optimized_config_id is None:
         own = [c for c in store.optimized_configs(ev_id) if c.optimized_for == condition_id]
@@ -98,8 +98,8 @@ def compare(store: DataStore, ev_id: str, condition_id: str,
 
     # the baseline car under the benchmark (WLTP), so the user can compare it with this condition
     benchmark = None
-    bench_cond = next((c for c in store.available_conditions() if c.group == "standard"), None)
-    if bench_cond is not None and bench_cond.condition_id != condition_id:
+    bench_cond = store.benchmark_for(condition_id)
+    if bench_cond is not None:
         bb = store.row(ev_id, bench_cond.condition_id, base.config_id)
         if bb is not None:
             benchmark = {

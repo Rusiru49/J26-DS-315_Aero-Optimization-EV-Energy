@@ -36,3 +36,21 @@ def test_untested_factors_are_listed_with_reason(store):
 def test_endpoint(client):
     j = client.get("/api/factors").json()
     assert j["available"] and len(j["insights"]) >= 3
+
+def test_explain_layer_uses_only_data_and_c3_notes(store):
+    j = factors.factor_analysis(store)
+    ex = {e["factor"]: e for e in j["explain"]}
+    # drag area: both designs listed with their numbers, and not separable yet (one condition per design)
+    d = ex["Cd and frontal area (drag area)"]
+    assert d["status"] == "not_separable" and "EV01_OPT1" in d["text"] and "EV01_OPT2" in d["text"]
+    # driving condition: both conditions listed
+    c = ex["Driving condition (speed, idle share, distance)"]
+    assert "Urban" in c["text"] and "Expressway" in c["text"]
+    # C3 settings come straight from the model notes of the data file
+    assert ex["Regenerative braking"]["status"] == "fixed" and "included" in ex["Regenerative braking"]["text"]
+    assert "not included" in ex["Auxiliary load"]["text"]
+    assert ex["Road gradient"]["status"] == "fixed"
+    # one EV only: vehicle factors are not tested, and the reason is given
+    assert ex["Vehicle mass"]["status"] == "needs_data" and "EV" in ex["Vehicle mass"]["text"]
+    assert ex["Electricity tariff"]["status"] == "cost_only"
+    assert "Not available yet" in j["explain_later"]

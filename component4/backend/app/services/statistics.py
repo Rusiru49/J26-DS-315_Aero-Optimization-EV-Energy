@@ -217,7 +217,7 @@ def live_statistics(store: DataStore, settings: Settings) -> dict:
 def sample_dataset(seed: int = 42) -> pd.DataFrame:
     """Generated sample: 6 driving conditions x 8 designs (used to show the methods)."""
     rng = np.random.default_rng(seed)
-    speeds = {"Urban": 21.8, "Suburban": 37.0, "Rural": 44.0, "WLTP": 46.5,
+    speeds = {"Urban": 21.8, "Sub Urban": 37.0, "Rural": 44.0, "WLTP": 46.5,
               "Intercity": 63.0, "Expressway": 94.5}
     cd_red = np.linspace(4, 12, 8)  # % Cd reduction of 8 candidate designs
     rows = []

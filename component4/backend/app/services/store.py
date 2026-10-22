@@ -15,8 +15,10 @@ from ..schemas import Catalog, Condition, Configuration, EV, PredictResponse, Re
 
 CONDITION_LABELS = {
     "WLTP": "WLTP (standard)",
+    "WLTP_Urban": "WLTP (for Urban)",
+    "WLTP_Expressway": "WLTP (for Expressway)",
     "SLDC_Urban": "Urban",
-    "SLDC_Suburban": "Suburban",
+    "SLDC_Suburban": "Sub Urban",
     "SLDC_Intercity": "Intercity",
     "SLDC_Expressway": "Expressway (Highway)",
     "SLDC_Rural": "Rural",
@@ -91,8 +93,8 @@ class DataStore:
         return [c for c in self.get_ev(ev_id).configurations if c.type == "optimized"]
 
     def optimized_config(self, ev_id: str, config_id: Optional[str] = None,
-        for_condition: Optional[str] = None) -> Configuration:
-        """The optimized design asked for. With no id: the design made for `for_condition`
+                         for_condition: Optional[str] = None) -> Configuration:
+        """The optimized design asked for. With no id: the design found for `for_condition`
         (if there is one), otherwise the first optimized design."""
         opts = self.optimized_configs(ev_id)
         if not opts:
@@ -124,6 +126,22 @@ class DataStore:
         self.ensure_loaded()
         return any(p.available and p.results
                    for (_, cid), p in self.predictions.items() if cid == condition_id)
+
+    def benchmark_for(self, condition_id: str) -> Optional[Condition]:
+        """The standard-cycle (WLTP) entry to compare the baseline with, for a driving condition.
+        First choice: the entry made for this condition (`benchmark_of`). Otherwise a single
+        standard entry that is for all conditions. A standard entry itself has no benchmark."""
+        cond = self.get_condition(condition_id)
+        if cond.group == "standard":
+            return None
+        standard = [c for c in self.available_conditions() if c.group == "standard"]
+        for c in standard:
+            if c.benchmark_of == condition_id:
+                return c
+        for c in standard:
+            if not c.benchmark_of:
+                return c
+        return None
 
     def available_conditions(self) -> list[Condition]:
         self.ensure_loaded()
@@ -162,4 +180,4 @@ class DataStore:
             "source_mode": self.client.mode,
             "loaded_at": self.loaded_at,
             "load_seconds": self.load_seconds,
-        }   
+        }

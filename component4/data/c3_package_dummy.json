@@ -1,6 +1,6 @@
 {
   "package_version": "0.1-dummy",
-  "generated_on": "2026-10-22",
+  "generated_on": "2026-10-23",
   "status": "draft",
   "evs": [
     {
@@ -112,20 +112,31 @@
   ],
   "conditions": [
     {
-      "condition_id": "WLTP",
+      "condition_id": "WLTP_Urban",
       "group": "standard",
       "avg_speed_kmh": 46.5,
       "max_speed_kmh": 131.3,
       "idle_fraction": 0.13,
-      "distance_km": 23.27
+      "distance_km": 23.27,
+      "benchmark_of": "SLDC_Urban"
+    },
+    {
+      "condition_id": "WLTP_Expressway",
+      "group": "standard",
+      "avg_speed_kmh": 46.5,
+      "max_speed_kmh": 131.3,
+      "idle_fraction": 0.13,
+      "distance_km": 23.27,
+      "benchmark_of": "SLDC_Expressway"
     },
     {
       "condition_id": "SLDC_Urban",
       "group": "sldc",
       "avg_speed_kmh": 21.8,
-      "max_speed_kmh": 50.0,
+      "max_speed_kmh": 58.0,
       "idle_fraction": 0.24,
-      "distance_km": 9.6
+      "distance_km": 9.6,
+      "benchmark_of": null
     },
     {
       "condition_id": "SLDC_Suburban",
@@ -133,7 +144,8 @@
       "avg_speed_kmh": null,
       "max_speed_kmh": null,
       "idle_fraction": null,
-      "distance_km": null
+      "distance_km": null,
+      "benchmark_of": null
     },
     {
       "condition_id": "SLDC_Intercity",
@@ -141,15 +153,17 @@
       "avg_speed_kmh": null,
       "max_speed_kmh": null,
       "idle_fraction": null,
-      "distance_km": null
+      "distance_km": null,
+      "benchmark_of": null
     },
     {
       "condition_id": "SLDC_Expressway",
       "group": "sldc",
       "avg_speed_kmh": 94.5,
-      "max_speed_kmh": 100.0,
+      "max_speed_kmh": 118.0,
       "idle_fraction": 0.01,
-      "distance_km": 26.4
+      "distance_km": 26.4,
+      "benchmark_of": null
     },
     {
       "condition_id": "SLDC_Rural",
@@ -157,17 +171,26 @@
       "avg_speed_kmh": null,
       "max_speed_kmh": null,
       "idle_fraction": null,
-      "distance_km": null
+      "distance_km": null,
+      "benchmark_of": null
     }
   ],
   "results": [
     {
       "ev_id": "EV01",
       "config_id": "EV01_BASE",
-      "condition_id": "WLTP",
+      "condition_id": "WLTP_Urban",
       "energy_wh_per_km": 152.0,
       "range_km": 526.3,
       "cost_lkr_per_100km": 760.0
+    },
+    {
+      "ev_id": "EV01",
+      "config_id": "EV01_BASE",
+      "condition_id": "WLTP_Expressway",
+      "energy_wh_per_km": 171.0,
+      "range_km": 467.8,
+      "cost_lkr_per_100km": 855.0
     },
     {
       "ev_id": "EV01",

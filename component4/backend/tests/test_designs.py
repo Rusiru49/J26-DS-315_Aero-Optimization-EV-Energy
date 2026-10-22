@@ -13,8 +13,9 @@ def test_each_condition_uses_its_own_design(store):
 
 
 def test_wltp_has_no_optimized_result(store):
-    r = comparison.compare(store, "EV01", "WLTP")
-    assert r["available"] is False          # only the baseline has a WLTP result
+    for cond in ("WLTP_Urban", "WLTP_Expressway"):
+        r = comparison.compare(store, "EV01", cond)
+        assert r["available"] is False          # only the baseline has a WLTP result
 
 
 def test_ranking_matches_hand_calculation(store):
@@ -57,9 +58,14 @@ def test_designs_endpoint(client):
 def test_comparison_also_gives_the_baseline_under_wltp(store):
     r = comparison.compare(store, "EV01", "SLDC_Urban")
     b = r["benchmark"]
-    assert b["condition_id"] == "WLTP"
-    # by hand: baseline 152.0 Wh/km under WLTP, 138.0 under Urban
+    assert b["condition_id"] == "WLTP_Urban"
+    # by hand: baseline 152.0 Wh/km under WLTP (Urban), 138.0 under Urban
     assert b["baseline"]["energy_wh_per_km"] == 152.0
     assert b["difference"]["baseline_energy_wh_per_km"] == pytest.approx(138.0 - 152.0)
     assert b["difference"]["baseline_energy_pct"] == pytest.approx(-14.0 / 152.0 * 100)
     assert "optimized" not in b
+    # Expressway has its own, different WLTP result: baseline 171.0 Wh/km
+    e = comparison.compare(store, "EV01", "SLDC_Expressway")["benchmark"]
+    assert e["condition_id"] == "WLTP_Expressway" and e["baseline"]["energy_wh_per_km"] == 171.0
+    assert e["difference"]["baseline_energy_wh_per_km"] == pytest.approx(205.0 - 171.0)
+    assert store.benchmark_for("WLTP_Urban") is None      # a standard entry has no benchmark of its own

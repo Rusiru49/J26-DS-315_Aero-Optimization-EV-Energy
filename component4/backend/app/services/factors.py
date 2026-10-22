@@ -77,6 +77,80 @@ def _collinear(df: pd.DataFrame) -> bool:
     return True
 
 
+def _explain(store: DataStore, df: pd.DataFrame, by_condition: list, by_design: list,
+             vehicle: list, one_cond_per_design: bool, collinear: bool) -> list[dict]:
+    """The second layer: apart from Cd, what else could affect the result, and what the data says
+    about it. Every line is either a number from C3's results or a fact from C3's model notes.
+    Statuses: in_data, not_separable, needs_data, fixed (same for all results), cost_only."""
+    notes = store.catalog.model_notes
+    out = []
+
+    # 1. drag area (Cd x frontal area)
+    if by_design:
+        parts = [f"{d['config_id']}: drag area −{d['cda_reduction_pct']:.1f}%, saving {d['mean_saving_pct']:.1f}%"
+                 for d in by_design]
+        text = "; ".join(parts) + "."
+        status = "in_data"
+        if one_cond_per_design and len(by_design) >= 2:
+            text += (" Each design was tested under one driving condition only, so its effect "
+                     "cannot be separated from the condition yet.")
+            status = "not_separable"
+        out.append({"group": "Shape", "factor": "Cd and frontal area (drag area)",
+                    "status": status, "text": text})
+
+    # 2. driving condition
+    if len(by_condition) >= 2:
+        parts = []
+        for c in by_condition:
+            bits = []
+            if c["avg_speed_kmh"] is not None:
+                bits.append(f"{c['avg_speed_kmh']:g} km/h")
+            if c["idle_fraction"] is not None:
+                bits.append(f"{c['idle_fraction'] * 100:.0f}% idle")
+            if c["distance_km"] is not None:
+                bits.append(f"{c['distance_km']:g} km")
+            parts.append(f"{_short(c['label'])}: saving {c['mean_saving_pct']:.1f}% ({', '.join(bits)})")
+        text = "; ".join(parts) + "."
+        status = "in_data"
+        if collinear:
+            text += " Speed, idle share and distance change together here, so they cannot be told apart yet."
+            status = "not_separable"
+        out.append({"group": "Driving", "factor": "Driving condition (speed, idle share, distance)",
+                    "status": status, "text": text})
+    else:
+        out.append({"group": "Driving", "factor": "Driving condition (speed, idle share, distance)",
+                    "status": "needs_data", "text": "Needs results for at least 2 driving conditions."})
+
+    # 3. vehicle
+    for v in vehicle:
+        if v["tested"]:
+            out.append({"group": "Vehicle", "factor": v["factor"], "status": "in_data",
+                        "text": f"Correlation with the saving across {v['n_evs']} EVs: r = {v['r']:.2f}."})
+        else:
+            out.append({"group": "Vehicle", "factor": v["factor"], "status": "needs_data",
+                        "text": v["reason"]})
+
+    # 4. settings that C3 keeps the same for every result
+    def yes_no(x):
+        return None if x is None else ("included" if x else "not included")
+    for label, value in (("Regenerative braking", yes_no(notes.includes_regen_braking)),
+                         ("Auxiliary load", yes_no(notes.includes_auxiliary_load))):
+        if value is None:
+            text = "C3 did not say whether this is in the energy figures."
+        else:
+            text = f"C3 says it is {value} in the energy figures, the same for every result, so its effect is not measured here."
+        out.append({"group": "C3 model", "factor": label, "status": "fixed", "text": text})
+    if notes.road_gradient:
+        out.append({"group": "C3 model", "factor": "Road gradient", "status": "fixed",
+                    "text": f"C3 used a '{notes.road_gradient}' road for every result, so the effect of slope is not measured here."})
+
+    # 5. tariff
+    out.append({"group": "Cost", "factor": "Electricity tariff", "status": "cost_only",
+                "text": "Changes the running cost only, not the energy. Cost = energy × tariff ÷ charging efficiency "
+                        "(checked in Data Quality). See Compare Conditions → Sensitivity."})
+    return out
+
+
 def factor_analysis(store: DataStore) -> dict:
     df = _rows(store)
     if df.empty:
@@ -164,6 +238,10 @@ def factor_analysis(store: DataStore) -> dict:
             if one_cond_per_design else "Needs at least 2 driving conditions and 2 designs."),
         "by_condition": by_condition, "by_design": by_design,
         "vehicle_factors": vehicle,
+        "explain": _explain(store, df, by_condition, by_design, vehicle,
+                            one_cond_per_design, _collinear(df)),
+        "explain_later": "Explainable AI (planned): when C3 sends many more varied runs, a method that "
+                         "ranks each factor's share in a result can be added. Not available yet.",
         "conditions_move_together": _collinear(df),
         "insights": insights, "meta": store.meta(),
     }

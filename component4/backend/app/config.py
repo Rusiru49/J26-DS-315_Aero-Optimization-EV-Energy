@@ -22,9 +22,6 @@ class Settings:
     cors_origins: list[str] = field(default_factory=lambda: _env_list(
         "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"))
 
-    # Benchmark condition used for "WLTP vs local" comparison
-    benchmark_condition: str = "WLTP"
-
     # Minimum data for each test = the method's own mathematical minimum
     # (regression: needs more rows than predictors + 1, checked in the code)
     min_pairs_ttest: int = 2

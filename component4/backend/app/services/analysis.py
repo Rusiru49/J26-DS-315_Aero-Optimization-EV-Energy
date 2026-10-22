@@ -1,7 +1,7 @@
 """Function 2: compare driving conditions with each other (each with its own optimized design),
 plus sensitivity analysis.
 
-Everything here is arithmetic on the numbers C3 sent. No modelling assumptions are added:
+Everything here is arithmetic on the numbers C3 sent. No modelling assumptions are added: 
 - Condition comparison: differences and ratios of C3's own results.
 - Cd check: the Cd change compared with C3's own `cd_uncertainty` (C3's definition).
 - Tariff sensitivity: C3's cost is energy x tariff / charging efficiency (checked by the
@@ -18,17 +18,18 @@ def _short(label: str) -> str:
 
 
 # ------------------------------------------------------------------ insights
-def _insights(rows: list[dict], bench_energy: Optional[float], predicted_only: bool) -> list[str]:
+def _insights(rows: list[dict], predicted_only: bool) -> list[str]:
     """Plain statements of what the numbers show. No explanations of cause."""
     out = []
     if not rows:
         return ["No driving conditions with results yet."]
     for r in rows:
-        if r["baseline_vs_benchmark_pct"] is not None and bench_energy:
+        bench = r["benchmark_energy_wh_per_km"]
+        if r["baseline_vs_benchmark_pct"] is not None and bench:
             diff = r["baseline_vs_benchmark_pct"]
             word = "above" if diff >= 0 else "below"
             out.append(f"{_short(r['label'])}: the baseline car uses {r['energy_baseline_wh_per_km']:.1f} Wh/km, "
-                       f"{abs(diff):.1f}% {word} its WLTP value ({bench_energy:.1f} Wh/km).")
+                       f"{abs(diff):.1f}% {word} its WLTP value ({bench:.1f} Wh/km).")
     if len(rows) > 1:
         top = max(rows, key=lambda r: r["saving_pct"])
         low = min(rows, key=lambda r: r["saving_pct"])
@@ -41,22 +42,19 @@ def _insights(rows: list[dict], bench_energy: Optional[float], predicted_only: b
     return out
 
 
-def condition_comparison(store: DataStore, ev_id: str, benchmark: str,
+def condition_comparison(store: DataStore, ev_id: str,
                          condition_ids: Optional[list[str]] = None) -> dict:
     """The user picks any number of conditions; each is shown with its own optimized design
-    (baseline vs the design found for that condition) next to the others."""
+    (baseline vs the design found for that condition) next to the others. Each row also carries
+    the baseline car's standard-cycle (WLTP) result for that condition."""
     store.get_ev(ev_id)
     base = store.baseline_config(ev_id)
     for cid in condition_ids or []:
         store.get_condition(cid)        # unknown id -> NotFound (404)
-    bench_row = None
-    if any(c.condition_id == benchmark for c in store.available_conditions()):
-        bench_row = store.row(ev_id, benchmark, base.config_id)
-    bench_energy = None if bench_row is None else bench_row.energy_wh_per_km
 
     rows = []
     for cond in store.available_conditions():
-        if cond.condition_id == benchmark:
+        if cond.group == "standard":
             continue
         if condition_ids is not None and cond.condition_id not in condition_ids:
             continue
@@ -65,6 +63,8 @@ def condition_comparison(store: DataStore, ev_id: str, benchmark: str,
             continue
         s = c["savings"]
         eb = c["baseline"]["energy_wh_per_km"]
+        bm = c["benchmark"]
+        bench = None if bm is None else bm["baseline"]["energy_wh_per_km"]
         rows.append({
             "condition_id": cond.condition_id,
             "label": CONDITION_LABELS.get(cond.condition_id, cond.condition_id),
@@ -74,8 +74,9 @@ def condition_comparison(store: DataStore, ev_id: str, benchmark: str,
             "design_id": c["optimized_config_id"],
             "energy_baseline_wh_per_km": eb,
             "energy_optimized_wh_per_km": c["optimized"]["energy_wh_per_km"],
-            "baseline_vs_benchmark_pct": (None if not bench_energy
-                                          else (eb - bench_energy) / bench_energy * 100),
+            "benchmark_condition_id": None if bm is None else bm["condition_id"],
+            "benchmark_energy_wh_per_km": bench,
+            "baseline_vs_benchmark_pct": None if not bench else (eb - bench) / bench * 100,
             "saving_pct": s["energy_saving_pct"], "energy_saving_wh_per_km": s["energy_saving_wh_per_km"],
             "range_gain_km": s["range_gain_km"], "range_gain_pct": s["range_gain_pct"],
             "cost_saving_lkr_per_100km": s["cost_saving_lkr_per_100km"],
@@ -84,14 +85,12 @@ def condition_comparison(store: DataStore, ev_id: str, benchmark: str,
     ranking = [r["condition_id"] for r in sorted(rows, key=lambda r: -r["saving_pct"])]
     return {
         "ev_id": ev_id,
-        "benchmark_condition": benchmark if bench_energy is not None else None,
-        "benchmark_baseline_energy_wh_per_km": bench_energy,
         "conditions": rows,
         "coming_soon": [{"condition_id": c.condition_id,
                          "label": CONDITION_LABELS.get(c.condition_id, c.condition_id)}
                         for c in store.coming_soon_conditions()],
         "ranking": ranking,
-        "insights": _insights(rows, bench_energy, store.meta()["predicted_only"]),
+        "insights": _insights(rows, store.meta()["predicted_only"]),
         "meta": store.meta(),
     }
 

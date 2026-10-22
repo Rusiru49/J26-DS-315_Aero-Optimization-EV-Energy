@@ -2,9 +2,10 @@
 
 Format = the format agreed with C3 (docs/C4_Request_to_C3_Data_Package.md).
 Scope for PP1: one sedan, one baseline + one optimized design for each of Urban and Expressway,
-  - WLTP  (sample benchmark)
-  - SLDC_Urban
-  - SLDC_Expressway
+  - SLDC_Urban        baseline + its optimized design
+  - SLDC_Expressway   baseline + its optimized design
+  - WLTP_Urban        standard-cycle result of the baseline, for Urban      (baseline only)
+  - WLTP_Expressway   standard-cycle result of the baseline, for Expressway (baseline only)
 The other three SLDC conditions are listed but have no results ("coming soon").
 
 Run:  python scripts/generate_dummy_data.py
@@ -63,19 +64,23 @@ SHAPE_DEFS = [
 ]
 
 # condition_id, group, avg_speed, max_speed, idle_fraction, distance_km
+# The two standard-cycle entries each say which driving condition they are the benchmark of.
 CONDITIONS = [
-    ("WLTP", "standard", 46.5, 131.3, 0.13, 23.27),
-    ("SLDC_Urban", "sldc", 21.8, 50.0, 0.24, 9.6),
+    ("WLTP_Urban", "standard", 46.5, 131.3, 0.13, 23.27),
+    ("WLTP_Expressway", "standard", 46.5, 131.3, 0.13, 23.27),
+    ("SLDC_Urban", "sldc", 21.8, 58.0, 0.24, 9.6),
     ("SLDC_Suburban", "sldc", None, None, None, None),
     ("SLDC_Intercity", "sldc", None, None, None, None),
-    ("SLDC_Expressway", "sldc", 94.5, 100.0, 0.01, 26.4),
+    ("SLDC_Expressway", "sldc", 94.5, 118.0, 0.01, 26.4),
     ("SLDC_Rural", "sldc", None, None, None, None),
 ]
 
 # Dummy baseline energy (Wh/km) and the share of that energy that is aerodynamic drag.
 # Drag share grows with speed. Values are invented but realistic in size.
-BASE_ENERGY = {"WLTP": 152.0, "SLDC_Urban": 138.0, "SLDC_Expressway": 205.0}
-DRAG_SHARE = {"WLTP": 0.38, "SLDC_Urban": 0.27, "SLDC_Expressway": 0.58}
+BASE_ENERGY = {"WLTP_Urban": 152.0, "WLTP_Expressway": 171.0,
+               "SLDC_Urban": 138.0, "SLDC_Expressway": 205.0}
+DRAG_SHARE = {"SLDC_Urban": 0.27, "SLDC_Expressway": 0.58}
+BENCHMARK_OF = {"WLTP_Urban": "SLDC_Urban", "WLTP_Expressway": "SLDC_Expressway"}
 
 
 def build() -> dict:
@@ -95,7 +100,7 @@ def build() -> dict:
         rb = row("EV01_BASE", cond, eb)
         results.append(rb)
         # each optimized design is evaluated only under the condition it was made for.
-        # WLTP is the benchmark: only the baseline is evaluated under it (for now).
+        # The standard-cycle entries (WLTP) have the baseline only (for now).
         for (cfg_id, _for, cd, unc, area, _shape) in DESIGNS:
             if _for != cond:
                 continue
@@ -143,7 +148,7 @@ def build() -> dict:
         ],
         "conditions": [
             {"condition_id": c, "group": g, "avg_speed_kmh": a, "max_speed_kmh": m,
-             "idle_fraction": i, "distance_km": d}
+             "idle_fraction": i, "distance_km": d, "benchmark_of": BENCHMARK_OF.get(c)}
             for (c, g, a, m, i, d) in CONDITIONS
         ],
         "results": results,

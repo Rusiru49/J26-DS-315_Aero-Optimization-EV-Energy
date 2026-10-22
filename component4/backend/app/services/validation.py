@@ -14,7 +14,7 @@ EXPECTED_UNITS = {
     "energy_wh_per_km": "Wh/km", "range_km": "km", "cost_lkr_per_100km": "LKR/100km",
     "mass_kg": "kg", "usable_battery_kwh": "kWh",
 }
-KNOWN_CONDITIONS = {"WLTP", "SLDC_Urban", "SLDC_Suburban", "SLDC_Intercity",
+KNOWN_CONDITIONS = {"WLTP", "WLTP_Urban", "WLTP_Expressway", "SLDC_Urban", "SLDC_Suburban", "SLDC_Intercity",
                     "SLDC_Expressway", "SLDC_Rural"}
 
 def _finite(x) -> bool:
@@ -81,8 +81,13 @@ def run_validation(store: DataStore, settings: Settings) -> dict:
     cids = [c.condition_id for c in cat.conditions]
     dup = [k for k, v in Counter(cids).items() if v > 1]
     unknown = [c for c in cids if c not in KNOWN_CONDITIONS]
+    bad_link = [f"{c.condition_id}.benchmark_of='{c.benchmark_of}'" for c in cat.conditions
+                if c.benchmark_of and (c.benchmark_of not in cids or c.group != "standard")]
     if dup:
         rep.add("conditions", "Driving conditions", "fail", f"duplicate condition_id: {dup}")
+    elif bad_link:
+        rep.add("conditions", "Driving conditions", "fail",
+                f"benchmark_of must name a known driving condition, on a standard-cycle entry: {bad_link}")
     elif unknown:
         rep.add("conditions", "Driving conditions", "warn", f"Unrecognised condition ids: {unknown}")
     else:

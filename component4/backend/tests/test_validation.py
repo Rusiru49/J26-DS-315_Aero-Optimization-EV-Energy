@@ -91,3 +91,9 @@ def test_optimized_worse_than_baseline_warns(make_store):
                 r["cost_lkr_per_100km"] = round(150.0 / 1000 * 100 * 45 / 0.9, 2)
     _, by = _report(make_store(bad))
     assert by["not_worse"] == "warn"
+
+def test_standard_cycle_pointing_to_unknown_condition_is_caught(make_store):
+    def bad(p):
+        p["conditions"][0]["benchmark_of"] = "SLDC_Nowhere"
+    _, by = _report(make_store(bad))
+    assert by["conditions"] == "fail"

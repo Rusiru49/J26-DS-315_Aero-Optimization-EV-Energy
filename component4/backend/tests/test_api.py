@@ -9,7 +9,8 @@ from app.main import create_app
 def test_catalog_marks_coming_soon(client):
     cat = client.get("/api/catalog").json()
     status = {c["condition_id"]: c["status"] for c in cat["conditions"]}
-    assert status == {"WLTP": "available", "SLDC_Urban": "available", "SLDC_Suburban": "coming_soon",
+    assert status == {"WLTP_Urban": "available", "WLTP_Expressway": "available",
+                      "SLDC_Urban": "available", "SLDC_Suburban": "coming_soon",
                       "SLDC_Intercity": "coming_soon", "SLDC_Expressway": "available",
                       "SLDC_Rural": "coming_soon"}
     assert cat["meta"]["is_dummy"] is True and cat["meta"]["predicted_only"] is True
@@ -31,7 +32,7 @@ def test_coming_soon_condition_is_not_an_error(client):
 
 
 def test_not_found_and_bad_input(client):
-    assert client.get("/api/comparison", params={"ev_id": "X", "condition_id": "WLTP"}).status_code == 404
+    assert client.get("/api/comparison", params={"ev_id": "X", "condition_id": "WLTP_Urban"}).status_code == 404
     assert client.get("/api/comparison", params={"ev_id": "EV01", "condition_id": "Nope"}).status_code == 404
     assert client.get("/api/sensitivity", params={"ev_id": "EV01", "condition_id": "WLTP",
                                                   "tariff_change_pct": 900}).status_code == 422
@@ -40,7 +41,10 @@ def test_not_found_and_bad_input(client):
 
 def test_function_2_endpoints(client):
     c = client.get("/api/conditions/compare", params={"ev_id": "EV01"}).json()
-    assert c["benchmark_condition"] == "WLTP" and len(c["conditions"]) == 2
+    assert len(c["conditions"]) == 2
+    # the standard-cycle result differs for the two conditions
+    wltp = {r["condition_id"]: r["benchmark_energy_wh_per_km"] for r in c["conditions"]}
+    assert wltp == {"SLDC_Urban": 152.0, "SLDC_Expressway": 171.0}
     one = client.get("/api/conditions/compare",
                      params={"ev_id": "EV01", "conditions": "SLDC_Urban"}).json()
     assert [r["condition_id"] for r in one["conditions"]] == ["SLDC_Urban"]
@@ -63,7 +67,7 @@ def test_data_quality_and_statistics_endpoints(client):
 def test_api_mode_gives_same_answers_as_file_mode(client, api_mode_client):
     """Backend -> HTTP -> mock C3 returns exactly what the file client returns."""
     assert api_mode_client.get("/api/health").json()["c3_mode"] == "api"
-    for cond in ("WLTP", "SLDC_Urban", "SLDC_Expressway", "SLDC_Rural"):
+    for cond in ("WLTP_Urban", "SLDC_Urban", "SLDC_Expressway", "SLDC_Rural"):
         p = {"ev_id": "EV01", "condition_id": cond}
         a, b = client.get("/api/comparison", params=p).json(), api_mode_client.get("/api/comparison", params=p).json()
         a.pop("meta"), b.pop("meta")

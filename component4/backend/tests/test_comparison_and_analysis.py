@@ -67,14 +67,18 @@ def test_same_input_same_output(store):
 
 # ------------------------------------------------------------------ Function 2
 def test_condition_comparison_each_condition_with_its_own_design(store):
-    r = analysis.condition_comparison(store, "EV01", "WLTP")
+    r = analysis.condition_comparison(store, "EV01")
     by = {c["condition_id"]: c for c in r["conditions"]}
     assert set(by) == {"SLDC_Urban", "SLDC_Expressway"}            # WLTP is the benchmark, not a row
     assert by["SLDC_Urban"]["design_id"] == "EV01_OPT1" and by["SLDC_Expressway"]["design_id"] == "EV01_OPT2"
-    assert r["benchmark_condition"] == "WLTP" and r["benchmark_baseline_energy_wh_per_km"] == 152.0
-    # baseline under the condition vs baseline under WLTP, by hand: (138.0 - 152.0) / 152.0
+    # each condition has its own standard-cycle (WLTP) result for the baseline car
+    assert by["SLDC_Urban"]["benchmark_condition_id"] == "WLTP_Urban"
+    assert by["SLDC_Expressway"]["benchmark_condition_id"] == "WLTP_Expressway"
+    assert by["SLDC_Urban"]["benchmark_energy_wh_per_km"] == 152.0
+    assert by["SLDC_Expressway"]["benchmark_energy_wh_per_km"] == 171.0
+    # baseline under the condition vs its WLTP result, by hand: (138.0 - 152.0) / 152.0 and (205.0 - 171.0) / 171.0
     assert by["SLDC_Urban"]["baseline_vs_benchmark_pct"] == pytest.approx(-14.0 / 152.0 * 100)
-    assert by["SLDC_Expressway"]["baseline_vs_benchmark_pct"] == pytest.approx(53.0 / 152.0 * 100)
+    assert by["SLDC_Expressway"]["baseline_vs_benchmark_pct"] == pytest.approx(34.0 / 171.0 * 100)
     assert r["ranking"] == ["SLDC_Expressway", "SLDC_Urban"]
     assert {c["condition_id"] for c in r["coming_soon"]} == {"SLDC_Suburban", "SLDC_Intercity", "SLDC_Rural"}
     text = " ".join(r["insights"])
@@ -83,14 +87,14 @@ def test_condition_comparison_each_condition_with_its_own_design(store):
 
 
 def test_user_can_pick_which_conditions_to_compare(store):
-    only_urban = analysis.condition_comparison(store, "EV01", "WLTP", ["SLDC_Urban"])
+    only_urban = analysis.condition_comparison(store, "EV01", ["SLDC_Urban"])
     assert [c["condition_id"] for c in only_urban["conditions"]] == ["SLDC_Urban"]
-    both = analysis.condition_comparison(store, "EV01", "WLTP", ["SLDC_Expressway", "SLDC_Urban"])
+    both = analysis.condition_comparison(store, "EV01", ["SLDC_Expressway", "SLDC_Urban"])
     assert len(both["conditions"]) == 2
     # a condition without results is left out (it is listed under coming_soon)
-    assert len(analysis.condition_comparison(store, "EV01", "WLTP", ["SLDC_Urban", "SLDC_Rural"])["conditions"]) == 1
+    assert len(analysis.condition_comparison(store, "EV01", ["SLDC_Urban", "SLDC_Rural"])["conditions"]) == 1
     with pytest.raises(NotFound):
-        analysis.condition_comparison(store, "EV01", "WLTP", ["SLDC_Nope"])
+        analysis.condition_comparison(store, "EV01", ["SLDC_Nope"])
 
 
 def test_cd_check_uses_c3_uncertainty(store):

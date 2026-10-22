@@ -51,8 +51,8 @@ def main() -> int:
 
         cat = c4.get("/api/catalog").json()
         avail = [c["condition_id"] for c in cat["conditions"] if c["available"]]
-        check("3 conditions available, 3 coming soon",
-              avail == ["WLTP", "SLDC_Urban", "SLDC_Expressway"], str(avail))
+        check("4 entries with results (2 standard-cycle, 2 local), 3 coming soon",
+              avail == ["WLTP_Urban", "WLTP_Expressway", "SLDC_Urban", "SLDC_Expressway"], str(avail))
 
         for cond in ("SLDC_Urban", "SLDC_Expressway"):
             t0 = time.perf_counter()
@@ -63,7 +63,9 @@ def main() -> int:
                   r.status_code == 200 and j["savings"]["energy_saving_wh_per_km"] > 0 and ms < 2000)
 
         j = c4.get("/api/conditions/compare", params={"ev_id": "EV01"}).json()
-        check("function 2 condition comparison", len(j["conditions"]) == 2 and j["benchmark_condition"] == "WLTP")
+        check("function 2 condition comparison", len(j["conditions"]) == 2
+              and {r["condition_id"]: r["benchmark_energy_wh_per_km"] for r in j["conditions"]}
+              == {"SLDC_Urban": 152.0, "SLDC_Expressway": 171.0})
         j = c4.get("/api/sensitivity", params={"ev_id": "EV01", "condition_id": "SLDC_Urban"}).json()
         check("function 2 sensitivity", j["cd_check"]["within_uncertainty"] is False)
         check("data quality", c4.get("/api/data-quality").json()["status"] == "pass")
@@ -78,7 +80,7 @@ def main() -> int:
         r = c4.post("/api/refresh")
         check("C3 down -> clear 502 error", r.status_code == 502, r.text[:90])
         check("backend still answers from its last good data",
-              c4.get("/api/comparison", params={"ev_id": "EV01", "condition_id": "WLTP"}).status_code == 200)
+              c4.get("/api/comparison", params={"ev_id": "EV01", "condition_id": "SLDC_Urban"}).status_code == 200)
     finally:
         for p in (mock, backend):
             if p.poll() is None:
