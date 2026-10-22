@@ -1,6 +1,6 @@
 {
   "package_version": "0.1-dummy",
-  "generated_on": "2026-10-21",
+  "generated_on": "2026-10-22",
   "status": "draft",
   "evs": [
     {
@@ -13,6 +13,7 @@
           "config_id": "EV01_BASE",
           "type": "baseline",
           "optimized_from": null,
+          "optimized_for": null,
           "frontal_area_m2": 2.3,
           "cd": 0.23,
           "cd_uncertainty": 0.002,
@@ -29,6 +30,7 @@
           "config_id": "EV01_OPT1",
           "type": "optimized",
           "optimized_from": "EV01_BASE",
+          "optimized_for": "SLDC_Urban",
           "frontal_area_m2": 2.28,
           "cd": 0.208,
           "cd_uncertainty": 0.004,
@@ -40,6 +42,23 @@
             "ground_clearance_mm": 130
           },
           "geometry_file": "EV01_OPT1.glb"
+        },
+        {
+          "config_id": "EV01_OPT2",
+          "type": "optimized",
+          "optimized_from": "EV01_BASE",
+          "optimized_for": "SLDC_Expressway",
+          "frontal_area_m2": 2.28,
+          "cd": 0.201,
+          "cd_uncertainty": 0.005,
+          "shape_parameters": {
+            "windshield_angle_deg": 23,
+            "hood_angle_deg": 7,
+            "spoiler_angle_deg": 16,
+            "boat_tail_angle_deg": 22,
+            "ground_clearance_mm": 120
+          },
+          "geometry_file": "EV01_OPT2.glb"
         }
       ]
     }
@@ -160,6 +179,14 @@
     },
     {
       "ev_id": "EV01",
+      "config_id": "EV01_OPT2",
+      "condition_id": "WLTP",
+      "energy_wh_per_km": 144.3,
+      "range_km": 554.4,
+      "cost_lkr_per_100km": 721.5
+    },
+    {
+      "ev_id": "EV01",
       "config_id": "EV01_BASE",
       "condition_id": "SLDC_Urban",
       "energy_wh_per_km": 138.0,
@@ -176,6 +203,14 @@
     },
     {
       "ev_id": "EV01",
+      "config_id": "EV01_OPT2",
+      "condition_id": "SLDC_Urban",
+      "energy_wh_per_km": 133.0,
+      "range_km": 601.5,
+      "cost_lkr_per_100km": 665.0
+    },
+    {
+      "ev_id": "EV01",
       "config_id": "EV01_BASE",
       "condition_id": "SLDC_Expressway",
       "energy_wh_per_km": 205.0,
@@ -189,6 +224,14 @@
       "energy_wh_per_km": 192.7,
       "range_km": 415.2,
       "cost_lkr_per_100km": 963.5
+    },
+    {
+      "ev_id": "EV01",
+      "config_id": "EV01_OPT2",
+      "condition_id": "SLDC_Expressway",
+      "energy_wh_per_km": 189.1,
+      "range_km": 423.1,
+      "cost_lkr_per_100km": 945.5
     }
   ],
   "comparisons": [
@@ -206,6 +249,17 @@
     {
       "ev_id": "EV01",
       "baseline_config_id": "EV01_BASE",
+      "optimized_config_id": "EV01_OPT2",
+      "condition_id": "WLTP",
+      "energy_saving_wh_per_km": 7.7,
+      "energy_saving_pct": 5.07,
+      "range_gain_km": 28.1,
+      "cost_saving_lkr_per_100km": 38.5,
+      "saving_within_uncertainty": false
+    },
+    {
+      "ev_id": "EV01",
+      "baseline_config_id": "EV01_BASE",
       "optimized_config_id": "EV01_OPT1",
       "condition_id": "SLDC_Urban",
       "energy_saving_wh_per_km": 3.9,
@@ -217,12 +271,34 @@
     {
       "ev_id": "EV01",
       "baseline_config_id": "EV01_BASE",
+      "optimized_config_id": "EV01_OPT2",
+      "condition_id": "SLDC_Urban",
+      "energy_saving_wh_per_km": 5.0,
+      "energy_saving_pct": 3.62,
+      "range_gain_km": 21.8,
+      "cost_saving_lkr_per_100km": 25.0,
+      "saving_within_uncertainty": false
+    },
+    {
+      "ev_id": "EV01",
+      "baseline_config_id": "EV01_BASE",
       "optimized_config_id": "EV01_OPT1",
       "condition_id": "SLDC_Expressway",
       "energy_saving_wh_per_km": 12.3,
       "energy_saving_pct": 6.0,
       "range_gain_km": 25.0,
       "cost_saving_lkr_per_100km": 61.5,
+      "saving_within_uncertainty": false
+    },
+    {
+      "ev_id": "EV01",
+      "baseline_config_id": "EV01_BASE",
+      "optimized_config_id": "EV01_OPT2",
+      "condition_id": "SLDC_Expressway",
+      "energy_saving_wh_per_km": 15.9,
+      "energy_saving_pct": 7.76,
+      "range_gain_km": 32.9,
+      "cost_saving_lkr_per_100km": 79.5,
       "saving_within_uncertainty": false
     }
   ],

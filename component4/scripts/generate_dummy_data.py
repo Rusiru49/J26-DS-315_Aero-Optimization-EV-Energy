@@ -1,7 +1,7 @@
 """Generate the DUMMY C3 data package used while real C3 data is not available.
 
 Format = the format agreed with C3 (docs/C4_Request_to_C3_Data_Package.md).
-Scope for PP1: one sedan, baseline + one optimized design,
+Scope for PP1: one sedan, one baseline + one optimized design FOR EACH driving condition,
   - WLTP  (sample benchmark)
   - SLDC_Urban
   - SLDC_Expressway
@@ -27,7 +27,6 @@ EV = {
 }
 
 BASE = {"cd": 0.230, "cd_uncertainty": 0.002, "frontal_area_m2": 2.30}
-OPT = {"cd": 0.208, "cd_uncertainty": 0.004, "frontal_area_m2": 2.28}
 
 BASE_SHAPE = {
     "windshield_angle_deg": 28,
@@ -36,13 +35,18 @@ BASE_SHAPE = {
     "boat_tail_angle_deg": 15,
     "ground_clearance_mm": 150,
 }
-OPT_SHAPE = {
-    "windshield_angle_deg": 25,
-    "hood_angle_deg": 8,
-    "spoiler_angle_deg": 14,
-    "boat_tail_angle_deg": 19,
-    "ground_clearance_mm": 130,
-}
+
+# One optimized design for each SLDC driving condition that has its own design (Urban, Expressway).
+# WLTP is the benchmark: it has no design of its own, but every design is tested under WLTP too.
+# config_id, optimized_for, cd, cd_uncertainty, frontal_area, shape parameters
+DESIGNS = [
+    ("EV01_OPT1", "SLDC_Urban", 0.208, 0.004, 2.28,
+     {"windshield_angle_deg": 25, "hood_angle_deg": 8, "spoiler_angle_deg": 14,
+      "boat_tail_angle_deg": 19, "ground_clearance_mm": 130}),
+    ("EV01_OPT2", "SLDC_Expressway", 0.201, 0.005, 2.28,
+     {"windshield_angle_deg": 23, "hood_angle_deg": 7, "spoiler_angle_deg": 16,
+      "boat_tail_angle_deg": 22, "ground_clearance_mm": 120}),
+]
 
 SHAPE_DEFS = [
     ("windshield_angle_deg", "deg", 22, 34, 28,
@@ -74,8 +78,6 @@ DRAG_SHARE = {"WLTP": 0.38, "SLDC_Urban": 0.27, "SLDC_Expressway": 0.58}
 
 
 def build() -> dict:
-    cda_ratio = (OPT["cd"] * OPT["frontal_area_m2"]) / (BASE["cd"] * BASE["frontal_area_m2"])
-
     def row(cfg_id, cond, energy):
         energy = round(energy, 1)
         rng = round(EV["usable_battery_kwh"] * 1000 / energy, 1)
@@ -86,21 +88,41 @@ def build() -> dict:
         }
 
     results, comparisons = [], []
+    base_cda = BASE["cd"] * BASE["frontal_area_m2"]
     for cond in BASE_ENERGY:
         eb = BASE_ENERGY[cond]
-        eo = eb * (1 - DRAG_SHARE[cond] * (1 - cda_ratio))
-        rb, ro = row("EV01_BASE", cond, eb), row("EV01_OPT1", cond, eo)
-        results += [rb, ro]
-        comparisons.append({
-            "ev_id": EV["ev_id"], "baseline_config_id": "EV01_BASE",
-            "optimized_config_id": "EV01_OPT1", "condition_id": cond,
-            "energy_saving_wh_per_km": round(rb["energy_wh_per_km"] - ro["energy_wh_per_km"], 2),
-            "energy_saving_pct": round((rb["energy_wh_per_km"] - ro["energy_wh_per_km"])
-                                       / rb["energy_wh_per_km"] * 100, 2),
-            "range_gain_km": round(ro["range_km"] - rb["range_km"], 1),
-            "cost_saving_lkr_per_100km": round(rb["cost_lkr_per_100km"] - ro["cost_lkr_per_100km"], 2),
-            "saving_within_uncertainty": abs(BASE["cd"] - OPT["cd"]) < OPT["cd_uncertainty"],
-        })
+        rb = row("EV01_BASE", cond, eb)
+        results.append(rb)
+        # every optimized design is evaluated under every condition
+        for (cfg_id, _for, cd, unc, area, _shape) in DESIGNS:
+            cda_ratio = (cd * area) / base_cda
+            eo = eb * (1 - DRAG_SHARE[cond] * (1 - cda_ratio))
+            ro = row(cfg_id, cond, eo)
+            results.append(ro)
+            comparisons.append({
+                "ev_id": EV["ev_id"], "baseline_config_id": "EV01_BASE",
+                "optimized_config_id": cfg_id, "condition_id": cond,
+                "energy_saving_wh_per_km": round(rb["energy_wh_per_km"] - ro["energy_wh_per_km"], 2),
+                "energy_saving_pct": round((rb["energy_wh_per_km"] - ro["energy_wh_per_km"])
+                                           / rb["energy_wh_per_km"] * 100, 2),
+                "range_gain_km": round(ro["range_km"] - rb["range_km"], 1),
+                "cost_saving_lkr_per_100km": round(rb["cost_lkr_per_100km"] - ro["cost_lkr_per_100km"], 2),
+                "saving_within_uncertainty": abs(BASE["cd"] - cd) < unc,
+            })
+
+    configurations = [
+        {"config_id": "EV01_BASE", "type": "baseline", "optimized_from": None,
+         "optimized_for": None,
+         "frontal_area_m2": BASE["frontal_area_m2"], "cd": BASE["cd"],
+         "cd_uncertainty": BASE["cd_uncertainty"],
+         "shape_parameters": BASE_SHAPE, "geometry_file": "EV01_BASE.glb"},
+    ] + [
+        {"config_id": cfg_id, "type": "optimized", "optimized_from": "EV01_BASE",
+         "optimized_for": _for,
+         "frontal_area_m2": area, "cd": cd, "cd_uncertainty": unc,
+         "shape_parameters": shape, "geometry_file": f"{cfg_id}.glb"}
+        for (cfg_id, _for, cd, unc, area, shape) in DESIGNS
+    ]
 
     return {
         "package_version": "0.1-dummy",
@@ -108,16 +130,7 @@ def build() -> dict:
         "status": "draft",
         "evs": [{
             **EV,
-            "configurations": [
-                {"config_id": "EV01_BASE", "type": "baseline", "optimized_from": None,
-                 "frontal_area_m2": BASE["frontal_area_m2"], "cd": BASE["cd"],
-                 "cd_uncertainty": BASE["cd_uncertainty"],
-                 "shape_parameters": BASE_SHAPE, "geometry_file": "EV01_BASE.glb"},
-                {"config_id": "EV01_OPT1", "type": "optimized", "optimized_from": "EV01_BASE",
-                 "frontal_area_m2": OPT["frontal_area_m2"], "cd": OPT["cd"],
-                 "cd_uncertainty": OPT["cd_uncertainty"],
-                 "shape_parameters": OPT_SHAPE, "geometry_file": "EV01_OPT1.glb"},
-            ],
+            "configurations": configurations,
         }],
         "shape_parameter_definitions": [
             {"name": n, "description": d, "unit": u, "min": lo, "max": hi,
@@ -160,5 +173,5 @@ if __name__ == "__main__":
     OUT.write_text(json.dumps(pkg, indent=2), encoding="utf-8")
     print(f"written {OUT}")
     for c in pkg["comparisons"]:
-        print(c["condition_id"], c["energy_saving_pct"], "%", c["range_gain_km"], "km",
+        print(c["optimized_config_id"], c["condition_id"], c["energy_saving_pct"], "%", c["range_gain_km"], "km",
               c["cost_saving_lkr_per_100km"], "LKR/100km")
