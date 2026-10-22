@@ -60,10 +60,10 @@ SHAPE_DEFS = [
 # condition_id, group, avg_speed, max_speed, idle_fraction, distance_km
 CONDITIONS = [
     ("WLTP", "standard", 46.5, 131.3, 0.13, 23.27),
-    ("SLDC_Urban", "sldc", 21.8, 58.0, 0.24, 9.6),
+    ("SLDC_Urban", "sldc", 21.8, 40.0, 0.24, 9.6),
     ("SLDC_Suburban", "sldc", None, None, None, None),
     ("SLDC_Intercity", "sldc", None, None, None, None),
-    ("SLDC_Expressway", "sldc", 94.5, 118.0, 0.01, 26.4),
+    ("SLDC_Expressway", "sldc", 94.5, 100.0, 0.01, 26.4),
     ("SLDC_Rural", "sldc", None, None, None, None),
 ]
 
