@@ -43,7 +43,10 @@ def main():
     area = joblib.load(os.path.join(MODEL_DIR, card["frontal_area_model_file"]))
     t_load = time.perf_counter() - t0
 
-    print(f"=== Drag prediction with {card['drag_model']} (trained on {sum(card['n_designs'].values())} real CFD runs) ===")
+    n_real = sum(card["n_designs"].values())
+    n_synth = sum(card.get("synthetic_kept_per_speed", {}).values()) if card.get("uses_augmentation") else 0
+    extra = f" + {n_synth:,} checked physics-labelled synthetic shapes" if n_synth else ""
+    print(f"=== Drag prediction with {card['drag_model']} (trained on {n_real} real CFD runs{extra}) ===")
     print("Shape:")
     for n in names:
         lo, hi = card["design_box"][n]

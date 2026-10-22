@@ -48,83 +48,128 @@ def architecture():
 
     ax.text(0.3, 8.35, "Workflow 1 - drag model:  DONE, validated on Member 2's real CFD", fontsize=15, color=TEAL,
             weight="bold")
-    box(0, y1, "CFD dataset (Member 2)\n30 shapes x 2 speeds\n+ surface pressure", False, sub="25/25 data checks")
-    box(1, y1, "POD pressure patterns\n+ physics-informed\ndrag labels", True, sub="1,200 new shapes (LHS)")
+    box(0, y1, "CFD dataset (Member 2)\nbody shapes at driving\nspeeds + surface pressure", False, sub="automatic data checks")
+    box(1, y1, "POD pressure patterns\n+ physics-informed\ndrag labels", True, sub="each label physics-checked")
     box(2, y1, "Train & select by\ncross-validation\nXGBoost / RF / ANN", False, sub="scored on real CFD only")
-    box(3, y1, "Drag model\nshape + speed -> Cd, area", True, sub="XGBoost + augmentation, ~2.5%")
+    box(3, y1, "Drag model\nshape + speed → Cd, area", True, sub="XGBoost + augmentation")
     for i in range(3):
         arrow(i, i + 1, y1 + h / 2)
     ax.text(0.3, 4.2, "Workflow 2 - next, after PP1", fontsize=15, color=GREY, weight="bold")
-    box(0, y2, "Member 1\ndriving cycles\n(WLTP + 5 SLDC)", False, done=False)
+    box(0, y2, "Member 1\ndriving cycles\n(WLTP + local cycles)", False, done=False)
     box(1, y2, "Energy model\nbattery use, range & cost\nper driving cycle", False, done=False, sub="built; needs final cycles")
     box(2, y2, "Cycle-aware optimiser\nBayesian search within\nstyling limits", True, done=False)
-    box(3, y2, "FastAPI / JSON package\n-> Member 4 dashboard", False, done=False, sub="format agreed")
+    box(3, y2, "FastAPI / JSON package\n→ Member 4 dashboard", False, done=False, sub="format agreed")
     for i in range(3):
         arrow(i, i + 1, y2 + h / 2, done=False)
-    ax.annotate("", xy=(xs[1] + w / 2, y2 + h + 0.05), xytext=(xs[3] + w / 2, y1 - 0.05),
-                arrowprops=dict(arrowstyle="-|>", color="#9a9a94", linewidth=1.6, linestyle="--", mutation_scale=18,
-                                connectionstyle="angle,angleA=-90,angleB=180,rad=12"))
+    # drag model feeds the energy model: down, left above the Workflow 2 row, down
+    mid, grey = 4.65, "#9a9a94"
+    ax.plot([xs[3] + w / 2, xs[3] + w / 2, xs[1] + w / 2, xs[1] + w / 2], [y1 - 0.05, mid, mid, y2 + h + 0.4],
+            color=grey, linewidth=1.6, linestyle="--")
+    ax.add_patch(FancyArrowPatch((xs[1] + w / 2, y2 + h + 0.45), (xs[1] + w / 2, y2 + h + 0.04), arrowstyle="-|>",
+                                 mutation_scale=18, linewidth=1.6, color=grey))
+    ax.text((xs[1] + xs[3] + w) / 2, mid + 0.18, "drag model feeds the energy model", ha="center", va="bottom",
+            fontsize=11, color=GREY, style="italic")
     return fig
 
 
 def methodology():
-    fig, ax = plt.subplots(figsize=(17, 9.2))
+    """Two lanes: BUILD (numbered steps, left to right, training shapes only) and
+    VALIDATE (held-out real CFD, never used for training), with only the few
+    arrows that connect them."""
+    fig, ax = plt.subplots(figsize=(17, 9))
     fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
-    ax.set_xlim(0, 16.2); ax.set_ylim(0, 9.2); ax.axis("off")
-    boxes = {}
+    ax.set_xlim(0, 17.1); ax.set_ylim(0, 9); ax.axis("off")
+    LIGHT_TEAL, LIGHT_GREY = "#E3EFEF", "#ECEAE4"
 
-    def box(key, x, y, w, h, text, teal=False, sub=None):
-        boxes[key] = (x, y, w, h)
-        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.18", linewidth=1.5,
-                                    facecolor=TEAL if teal else "white", edgecolor=TEAL if teal else "#777"))
-        col = "white" if teal else INK
-        ax.text(x + w / 2, y + h / 2 + (0.2 if sub else 0), text, ha="center", va="center", fontsize=12.5, color=col,
-                weight="bold" if teal else "normal", linespacing=1.25)
-        if sub:
-            ax.text(x + w / 2, y + 0.27, sub, ha="center", va="center", fontsize=10, color=col, style="italic")
+    ax.text(8.55, 8.65, "Workflow 1: how the drag model is built and validated", fontsize=17, color=TEAL,
+            weight="bold", ha="center", va="center")
 
-    def path(pts, label=None, at=None, dashed=False):
-        xs, ys = zip(*pts)
-        ax.plot(xs, ys, color=LINE, linewidth=1.4, linestyle="--" if dashed else "-", zorder=1)
-        ax.annotate("", xy=pts[-1], xytext=pts[-2],
-                    arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.4, mutation_scale=16))
-        if label:
-            ax.text(at[0], at[1], label, ha="center", va="center", fontsize=10.5, color=GREY,
-                    bbox=dict(facecolor=BG, edgecolor="none", pad=1.5))
+    # lanes
+    ax.add_patch(FancyBboxPatch((0.1, 4.3), 16.9, 3.95, boxstyle="round,pad=0,rounding_size=0.25",
+                                facecolor=LIGHT_TEAL, edgecolor="none"))
+    ax.add_patch(FancyBboxPatch((0.1, 0.15), 16.9, 3.75, boxstyle="round,pad=0,rounding_size=0.25",
+                                facecolor=LIGHT_GREY, edgecolor="none"))
+    ax.text(0.35, 7.95, "BUILD", fontsize=15, color=TEAL, weight="bold", va="center")
+    ax.text(1.45, 7.95, "the drag model; held-out shapes stay hidden until the winner is chosen", fontsize=12, color=TEAL, va="center")
+    ax.text(0.4, 2.75, "VALIDATE", fontsize=15, color=GREY, weight="bold", va="center")
+    ax.text(0.4, 2.05, "against held-out\nreal CFD shapes,\nnever used for\ntraining", fontsize=11.5, color=GREY,
+            va="center", linespacing=1.35)
 
-    y1, y2, y3, h1, h2, h3 = 7.2, 4.4, 1.3, 1.25, 1.35, 1.3
-    box("A", 0.2, y1, 2.7, h1, "Real CFD runs\n(Member 2)", sub="30 shapes x 2 speeds")
-    box("B", 3.3, y1, 2.7, h1, "Data verification", sub="25 automatic checks")
-    box("C", 6.4, y1, 3.0, h1, "Cross-validation split\n(by design, repeated)", sub="hidden at both speeds")
-    box("D", 10.4, y1, 2.6, h1, "POD model\n(pressure patterns)", teal=True)
-    box("E", 13.4, y1, 2.6, h1, "Helper model\n(Gaussian Process)", teal=True, sub="settings chosen by CV")
-    box("K", 0.2, y2, 2.7, h2, "Held-out runs\n(real CFD)", sub="used to score the models")
-    box("I", 3.6, y2, 3.3, h2, "Train & select\nXGBoost / RF / ANN", sub="augmentation kept only if it helps")
-    box("H", 7.8, y2, 2.9, h2, "Augmented dataset\n(real + synthetic)", sub="1,200 shapes per speed")
-    box("F", 12.4, y2, 3.0, h2, "Physics labeller\n(patterns -> Cd)", teal=True)
-    box("J", 3.6, y3, 3.3, h3 + 0.2, "Final drag model\n(shape + speed)", teal=True, sub="+ frontal-area model + model card")
-    box("L", 7.8, y3, 2.9, h3, "Label validation\n(vs held-out real CFD)", sub="+ physics-trend check")
-    box("G", 13.1, y3, 2.6, h3, "Shape generator\n(Latin hypercube)")
+    w, h, y = 2.5, 2.75, 4.65
+    xs = [0.3 + i * 2.8 for i in range(6)]
+    steps = [
+        ("Real CFD data", "Member 2's runs\nbody shapes at\ndriving speeds\n+ surface pressure", "automatic data checks", "white"),
+        ("Split by design", "training shapes /\nheld-out shapes\nrepeated\ncross-validation", "hidden at every speed", "white"),
+        ("Physics labeller", "POD pressure patterns\n+ Gaussian Process\nlabels new\nsampled shapes", None, "teal"),
+        ("Per-label checks", "stagnation limit\npositive pressure drag\nCd in CFD range\nin validated region", "failing labels removed", "check"),
+        ("Train & select", "XGBoost / RF / ANN\ntrained with and\nwithout the\nchecked labels", "augmentation only if it helps", "white"),
+        ("Final drag model", "winner retrained\non all real shapes\nshape + speed → Cd\n+ model card", None, "teal"),
+    ]
+    for i, (x, (title, body, note, style)) in enumerate(zip(xs, steps), start=1):
+        teal = style == "teal"
+        ink = "white" if teal else INK
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.2",
+                                    linewidth=2.4 if style == "check" else 1.4, facecolor=TEAL if teal else "white",
+                                    edgecolor="#888" if style == "white" else TEAL))
+        cx = x + w / 2
+        ax.add_patch(plt.Circle((cx, y + h), 0.27, facecolor=TEAL, edgecolor="white", linewidth=2.5, zorder=3))
+        ax.text(cx, y + h, str(i), ha="center", va="center", fontsize=13, weight="bold", color="white", zorder=4)
+        ax.text(cx, y + h - 0.55, title, ha="center", va="center", fontsize=13, weight="bold", color=ink)
+        ax.text(cx, y + h / 2 - (0.05 if note else 0.2), body, ha="center", va="center", fontsize=10.5,
+                linespacing=1.35, color=ink)
+        if note:
+            ax.text(cx, y + 0.3, note, ha="center", va="center", fontsize=9, style="italic",
+                    color="white" if teal else TEAL)
+        if i < 6:
+            ax.add_patch(FancyArrowPatch((x + w + 0.03, y + h / 2), (x + 2.8 - 0.03, y + h / 2), arrowstyle="-|>",
+                                         mutation_scale=20, linewidth=2.2, color=INK))
 
-    def mid(k):
-        return boxes[k][1] + boxes[k][3] / 2
+    yv, hv = 0.75, 2.1
 
-    path([(2.9, mid("A")), (3.3, mid("B"))])
-    path([(6.0, mid("B")), (6.4, mid("C"))])
-    path([(9.4, mid("C")), (10.4, mid("D"))], "training\nruns", (9.9, mid("C") + 0.38))
-    path([(13.0, mid("D")), (13.4, mid("E"))])
-    path([(11.7, y1), (11.7, 6.4), (13.3, 6.4), (13.3, y2 + h2)], "pattern amounts", (12.5, 6.62))
-    path([(14.7, y1), (14.7, y2 + h2)])
-    path([(14.4, y3 + h3), (14.4, y2)], "new shapes", (14.4, 3.5))
-    path([(12.4, mid("F")), (10.7, mid("H"))], "physics-based Cd", (11.55, mid("F") + 0.3))
-    path([(9.0, y1), (9.0, y2 + h2)], "real training runs", (9.0, 6.3))
-    path([(6.8, y1), (6.8, 6.45), (1.55, 6.45), (1.55, y2 + h2)], "held-out runs", (4.2, 6.45))
-    path([(7.8, mid("H")), (6.9, mid("I"))])
-    path([(2.9, mid("K")), (3.6, mid("I"))])
-    path([(5.25, y2), (5.25, y3 + h3 + 0.2)], "with vs without augmentation:\nlowest error wins,\nretrain on all designs", (6.75, 3.5))
-    path([(1.55, y2), (1.55, 0.7), (9.25, 0.7), (9.25, y3)], "real Cd", (5.4, 0.7), dashed=True)
-    path([(12.65, y2), (12.65, 1.95), (10.7, 1.95)], "predicted Cd", (11.6, 2.2), dashed=True)
-    ax.text(0.2, 8.85, "Workflow 1: how the drag model is built and validated", fontsize=16, color=TEAL, weight="bold")
+    def vbox(x, wv, title, body):
+        ax.add_patch(FancyBboxPatch((x, yv), wv, hv, boxstyle="round,pad=0.02,rounding_size=0.2", linewidth=1.4,
+                                    facecolor="white", edgecolor="#888", linestyle="--"))
+        ax.text(x + wv / 2, yv + hv - 0.4, title, ha="center", va="center", fontsize=12.5, weight="bold", color=INK)
+        ax.text(x + wv / 2, yv + hv / 2 - 0.25, body, ha="center", va="center", fontsize=10.5, linespacing=1.35,
+                color=INK)
+
+    vbox(xs[1], w, "Held-out shapes", "real CFD Cd\n(the answer key)")
+    vbox(xs[2], xs[3] + w - xs[2], "Label validation",
+         "labeller's Cd vs real Cd\non shapes it never saw\n→ calibrates each label's uncertainty")
+    vbox(xs[4], w, "Model scoring", "every candidate\nvs real Cd\nlowest error wins")
+
+    def link(x, up, label, dashed=True):
+        y0, y1 = (yv + hv + 0.03, y - 0.03) if up else (y - 0.03, yv + hv + 0.03)
+        ax.add_patch(FancyArrowPatch((x, y0), (x, y1), arrowstyle="-|>", mutation_scale=17, linewidth=1.7,
+                                     color=LINE, linestyle="--" if dashed else "-"))
+        ax.text(x + 0.1, (y0 + y1) / 2, label, ha="left", va="center", fontsize=10.5, color=GREY,
+                bbox=dict(boxstyle="round,pad=0.15", facecolor=BG, edgecolor="none"))
+
+    link(xs[1] + w / 2, False, "held-out", dashed=False)
+    link(xs[2] + 0.55, False, "predicted Cd")
+    link(xs[3] + w - 0.85, True, "uncertainty")
+    link(xs[4] + 0.45, False, "predicted Cd")
+    link(xs[4] + w - 0.4, True, "error")
+    ax.add_patch(FancyArrowPatch((xs[1] + w + 0.03, yv + hv / 2), (xs[2] - 0.03, yv + hv / 2), arrowstyle="-|>",
+                                 mutation_scale=17, linewidth=1.7, color=LINE))
+    ax.plot([xs[1] + w / 2, xs[1] + w / 2, xs[4] + w / 2], [yv, 0.42, 0.42], color=LINE, linewidth=1.7)
+    ax.add_patch(FancyArrowPatch((xs[4] + w / 2, 0.42), (xs[4] + w / 2, yv - 0.03), arrowstyle="-|>",
+                                 mutation_scale=17, linewidth=1.7, color=LINE))
+    ax.text((xs[1] + xs[4] + w) / 2, 0.42, "real Cd", ha="center", va="center", fontsize=10.5, color=GREY,
+            bbox=dict(boxstyle="round,pad=0.15", facecolor="#ECEAE4", edgecolor="none"))
+
+    # legend, in the empty corner under step 6
+    lx, ly = xs[5] + 0.1, 2.5
+    ax.text(lx, ly + 0.25, "How to read", fontsize=11.5, weight="bold", color=INK, va="center")
+    ax.add_patch(FancyArrowPatch((lx, ly - 0.25), (lx + 0.7, ly - 0.25), arrowstyle="-|>", mutation_scale=15,
+                                 linewidth=2.0, color=INK))
+    ax.text(lx + 0.85, ly - 0.25, "main build flow", fontsize=10, color=INK, va="center")
+    ax.add_patch(FancyArrowPatch((lx, ly - 0.75), (lx + 0.7, ly - 0.75), arrowstyle="-|>", mutation_scale=15,
+                                 linewidth=1.7, color=LINE, linestyle="--"))
+    ax.text(lx + 0.85, ly - 0.75, "checked against\nreal CFD", fontsize=10, color=INK, va="center")
+    ax.add_patch(FancyBboxPatch((lx, ly - 1.45), 0.7, 0.3, boxstyle="round,pad=0.01,rounding_size=0.06",
+                                facecolor=TEAL, edgecolor=TEAL))
+    ax.text(lx + 0.85, ly - 1.3, "core method", fontsize=10, color=INK, va="center")
     return fig
 
 
