@@ -32,14 +32,14 @@ export default function QualityPage({ catalog }: { catalog: Catalog }) {
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex flex-none flex-wrap items-center gap-2">
-        <h2 className="text-base font-semibold">Data checks before any analysis</h2>
+        <h2 className="text-[16px] font-semibold text-ink">Data Checks Before Any Analysis</h2>
         <Chip tone="ok">✓ {q.counts.pass} passed</Chip>
         {q.counts.warn > 0 && <Chip tone="warn">! {q.counts.warn} warnings</Chip>}
         {q.counts.fail > 0 && <Chip tone="bad">✕ {q.counts.fail} failed</Chip>}
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-3">
-        <Card className="col-span-8" title="Checks on the data received from C3" subtitle="C4 checks every response. Bad data is reported here and never used silently.">
+        <Card className="col-span-8" title="Checks On The Data Received From C3" subtitle="C4 checks every response. Bad data is reported here and never used silently.">
           <ul className="grid grid-cols-2 gap-x-6">
             {q.checks.map((c) => (
               <li key={c.id} className="flex items-start gap-2 border-b border-line py-2">
@@ -55,7 +55,7 @@ export default function QualityPage({ catalog }: { catalog: Catalog }) {
           </ul>
         </Card>
 
-        <Card className="col-span-4" title="How C3 defines its results" subtitle="Notes sent by C3 together with the numbers.">
+        <Card className="col-span-4" title="How C3 Defines Its Results" subtitle="Notes sent by C3 together with the numbers.">
           <dl className="text-[13px]">
             {NOTE_LABELS.map(([k, label]) => (
               <div key={k} className="flex justify-between gap-3 border-b border-line py-1.5">

@@ -36,7 +36,7 @@ export default function ImpactPage({
     <div className="grid h-full grid-cols-12 gap-3">
       <div className="col-span-7 flex min-h-0 flex-col gap-3">
         <div className="flex flex-none flex-wrap items-center gap-2">
-          <h2 className="text-base font-semibold">
+          <h2 className="text-[16px] font-semibold text-ink">
             {shortName(ev.ev_model)} · {shortName(cond?.label ?? conditionId)}
           </h2>
           <Chip tone="opt">
@@ -55,7 +55,7 @@ export default function ImpactPage({
         <Card
           className="min-h-0 flex-1"
           bodyClass="overflow-hidden"
-          title="3D shape"
+          title="3D Shape"
           subtitle={`Baseline and ${optCfg.config_id}`}
         >
           <Viewer3D baseline={baseCfg} optimized={optCfg} />
@@ -113,7 +113,7 @@ function SideBySide({ d }: { d: ComparisonOK }) {
   const b = d.baseline;
   const o = d.optimized;
   return (
-    <Card title="Baseline and optimized side by side" subtitle="Values come from C3. Differences are calculated by C4.">
+    <Card title="Baseline And Optimized Side By Side" subtitle="Values come from C3. Differences are calculated by C4.">
       <table className="w-full">
         <thead>
           <tr className="border-b border-line">
@@ -126,9 +126,9 @@ function SideBySide({ d }: { d: ComparisonOK }) {
         <tbody className="divide-y divide-line">
           <Row label="Cd" b={num(b.cd, 3)} o={num(o.cd, 3)} change={signed(d.aerodynamics.cd_change, 3)} />
           <Row label="Frontal area (m²)" b={num(b.frontal_area_m2, 2)} o={num(o.frontal_area_m2, 2)} change={signed(d.aerodynamics.frontal_area_change_m2, 2)} />
-          <Row label="Energy (Wh/km)" b={num(b.energy_wh_per_km, 1)} o={num(o.energy_wh_per_km, 1)} change={signed(-s.energy_saving_wh_per_km, 1)} />
+          <Row label="Energy Consumed (Wh/km)" b={num(b.energy_wh_per_km, 1)} o={num(o.energy_wh_per_km, 1)} change={signed(-s.energy_saving_wh_per_km, 1)} />
           <Row label="Range (km)" b={num(b.range_km, 1)} o={num(o.range_km, 1)} change={signed(s.range_gain_km, 1)} />
-          <Row label="Cost (LKR/100 km)" b={num(b.cost_lkr_per_100km, 1)} o={num(o.cost_lkr_per_100km, 1)} change={signed(-s.cost_saving_lkr_per_100km, 1)} />
+          <Row label="Running Cost (LKR/100 km)" b={num(b.cost_lkr_per_100km, 1)} o={num(o.cost_lkr_per_100km, 1)} change={signed(-s.cost_saving_lkr_per_100km, 1)} />
         </tbody>
       </table>
       <p className="mt-3 rounded-xl border border-brand/20 bg-brand/5 p-2.5 text-xs leading-relaxed">
@@ -169,7 +169,7 @@ function BenchmarkCard({ d }: { d: ComparisonOK }) {
   );
   if (!bm) {
     return (
-      <Card title="Baseline car: WLTP vs this condition">
+      <Card title="Baseline Car: WLTP vs This Condition">
         <p className="text-sm text-muted">No WLTP result for the baseline car yet.</p>
       </Card>
     );
@@ -178,12 +178,12 @@ function BenchmarkCard({ d }: { d: ComparisonOK }) {
   const b = d.baseline;
   const diff = bm.difference;
   const rows: [string, string, string, string][] = [
-    ["Energy (Wh/km)", num(bm.baseline.energy_wh_per_km, 1), num(b.energy_wh_per_km, 1), signed(diff.baseline_energy_wh_per_km, 1)],
+    ["Energy Consumed (Wh/km)", num(bm.baseline.energy_wh_per_km, 1), num(b.energy_wh_per_km, 1), signed(diff.baseline_energy_wh_per_km, 1)],
     ["Range (km)", num(bm.baseline.range_km, 1), num(b.range_km, 1), signed(diff.baseline_range_km, 1)],
-    ["Cost (LKR/100 km)", num(bm.baseline.cost_lkr_per_100km, 1), num(b.cost_lkr_per_100km, 1), signed(diff.baseline_cost_lkr_per_100km, 1)],
+    ["Running Cost (LKR/100 km)", num(bm.baseline.cost_lkr_per_100km, 1), num(b.cost_lkr_per_100km, 1), signed(diff.baseline_cost_lkr_per_100km, 1)],
   ];
   return (
-    <Card title={`Baseline car: ${bn} vs ${sel}`} subtitle={`${bn} is the standard test cycle.`} bodyClass="flex flex-col">
+    <Card title={`Baseline Car: ${bn} vs ${sel}`} subtitle={`${bn} is the standard test cycle.`} bodyClass="flex flex-col">
       <p className="mb-2 flex-none rounded-xl border border-bench/25 bg-bench/5 p-2.5 text-xs leading-relaxed">
         The baseline car uses <b>{num(b.energy_wh_per_km, 1)} Wh/km</b> under {sel} but{" "}
         <b>{num(bm.baseline.energy_wh_per_km, 1)} Wh/km</b> under {bn} ({signed(diff.baseline_energy_pct, 1)} %). So {bn}{" "}
@@ -236,7 +236,7 @@ function ShapeAndAero({ d }: { d: ComparisonOK }) {
   return (
     <Card
       className="flex-none"
-      title="What changed in the shape"
+      title="What Changed In The Shape"
       subtitle={
         unc
           ? `Cd changed by ${signed(a.cd_change, 3)} (${signed(a.cd_change_pct, 1)} %), ${num(times, 1)} × C3's error (±${num(unc, 3)}).`

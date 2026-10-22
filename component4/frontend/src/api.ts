@@ -179,6 +179,8 @@ export interface ConditionRow {
   design_id: string;
   energy_baseline_wh_per_km: number;
   energy_optimized_wh_per_km: number;
+  benchmark_condition_id: string | null;
+  benchmark_energy_wh_per_km: number | null;
   baseline_vs_benchmark_pct: number | null;
   saving_pct: number;
   energy_saving_wh_per_km: number;
@@ -189,8 +191,6 @@ export interface ConditionRow {
 }
 
 export interface ConditionsCompare {
-  benchmark_condition: string | null;
-  benchmark_baseline_energy_wh_per_km: number | null;
   conditions: ConditionRow[];
   coming_soon: { condition_id: string; label: string }[];
   ranking: string[];
@@ -354,7 +354,15 @@ export interface FactorsOK {
   }[];
   vehicle_factors: { factor: string; tested: boolean; r: number | null; n_evs: number; reason: string | null }[];
   conditions_move_together: boolean;
+  explain: ExplainItem[];
+  explain_later: string;
   insights: string[];
+}
+export interface ExplainItem {
+  group: string;
+  factor: string;
+  status: "in_data" | "not_separable" | "needs_data" | "fixed" | "cost_only";
+  text: string;
 }
 export type Factors = FactorsOK | { available: false; message: string };
 

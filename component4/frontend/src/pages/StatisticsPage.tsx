@@ -1,28 +1,49 @@
 import { useMemo, useState } from "react";
 import { api } from "../api";
-import type { Anova, Corr, Desc, FactorsOK, LiveCard, Reg, SampleStats, TTest } from "../api";
+import type { Anova, Corr, Desc, ExplainItem, FactorsOK, LiveCard, Reg, SampleStats, TTest } from "../api";
 import { useApi } from "../lib/useApi";
-import { condShort, num, pval, shortName, signed } from "../lib/format";
-import { Card, Chip, ErrorBox, Loading, Segmented, TD, TH } from "../components/ui";
+import { num, pval, shortName, signed } from "../lib/format";
+import { Card, Chip, ErrorBox, Loading, TD, TH } from "../components/ui";
+import { Icon } from "../components/icons";
+import type { IconName } from "../components/icons";
 import PlotlyChart from "../components/PlotlyChart";
 
 type Tab = "factors" | "live" | "demo";
+
+const TABS: { key: Tab; icon: IconName; title: string; text: string }[] = [
+  { key: "factors", icon: "layers", title: "What Affects The Saving?", text: "The factors behind the result, explained in plain words." },
+  { key: "live", icon: "flask", title: "Statistical Tests", text: "The four tests on the results from C3. Each one shows its n." },
+  { key: "demo", icon: "play", title: "Method Demo", text: "The same four tests on a larger example: 6 driving conditions × 8 designs = 48 results." },
+];
 
 export default function StatisticsPage() {
   const [tab, setTab] = useState<Tab>("factors");
   return (
     <div className="flex h-full flex-col gap-3">
-      <div className="flex flex-none flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">Statistical analysis</h2>
-        <Segmented
-          value={tab}
-          onChange={setTab}
-          options={[
-            ["factors", "What affects the saving?"],
-            ["live", "Statistical tests (for the report)"],
-            ["demo", "Method demonstration (6 conditions × 8 designs)"],
-          ]}
-        />
+      <div className="grid flex-none grid-cols-3 gap-3">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${
+              tab === t.key
+                ? "border-brand bg-brand/10 shadow-[0_1px_6px_rgba(29,127,166,0.18)]"
+                : "border-line bg-white hover:border-brand/40"
+            }`}
+          >
+            <span
+              className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${
+                tab === t.key ? "bg-brand text-white" : "bg-bg text-brand"
+              }`}
+            >
+              <Icon name={t.icon} size={21} />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-ink">{t.title}</span>
+              <span className="block text-xs leading-snug text-muted">{t.text}</span>
+            </span>
+          </button>
+        ))}
       </div>
       <div className="min-h-0 flex-1">{tab === "factors" ? <Factors /> : tab === "live" ? <Live /> : <Demo />}</div>
     </div>
@@ -89,7 +110,7 @@ function FactorsBody({ d }: { d: FactorsOK }) {
     <div className="grid h-full grid-cols-12 grid-rows-2 gap-3">
       <Card
         className="col-span-7"
-        title="What goes with the differences in energy saving?"
+        title="Layer 1: What The Data Shows"
         subtitle={`Results from C3: ${d.n_pairs} baseline-optimized pairs (${d.n_conditions} driving conditions, ${d.n_designs} designs).`}
       >
         {v ? (
@@ -122,43 +143,58 @@ function FactorsBody({ d }: { d: FactorsOK }) {
       </Card>
 
       <Card
-        className="col-span-5"
-        title="Other factors"
-        subtitle="Factors an engineer may ask about. They are tested as soon as the data allows."
+        className="col-span-5 row-span-2"
+        title="Layer 2: Apart From Cd, What Else Could Affect It?"
+        subtitle="Each line is a number from C3's results or a setting C3 reported. It shows how the results go together, not the cause."
       >
-        <div className="space-y-2">
-          {d.vehicle_factors.map((f) => (
-            <div key={f.factor} className={`rounded-xl border p-2.5 ${f.tested ? "border-line" : "border-dashed border-soon bg-white/60"}`}>
-              <div className="flex items-center justify-between">
-                <b className="text-[13px]">{f.factor}</b>
-                {f.tested ? <Chip tone="ok">Tested</Chip> : <Chip tone="soon">Not tested yet</Chip>}
-              </div>
-              <p className="mt-1 text-xs text-muted">
-                {f.tested ? `Correlation with the saving across ${f.n_evs} EVs: r = ${num(f.r, 2)}.` : f.reason}
-              </p>
-            </div>
-          ))}
-          <div className="rounded-xl border border-dashed border-soon bg-white/60 p-2.5">
-            <div className="flex items-center justify-between">
-              <b className="text-[13px]">Speed, idle share, distance</b>
-              {d.conditions_move_together ? <Chip tone="soon">Cannot be separated yet</Chip> : <Chip tone="soon">Needs more conditions</Chip>}
-            </div>
-            <p className="mt-1 text-xs text-muted">
-              {d.conditions_move_together
-                ? `They rise together across these ${d.n_conditions} conditions. The other SLDC conditions will make it possible to separate them.`
-                : `Only ${d.n_conditions} conditions have results (${d.by_condition.map((c) => condShort(c.condition_id)).join(", ")}). More conditions are needed.`}
-            </p>
+        <ExplainList items={d.explain} />
+        <div className="mt-3 rounded-xl border border-dashed border-soon bg-white/60 p-2.5">
+          <div className="flex items-center justify-between">
+            <b className="text-[13px]">Layer 3: Explainable AI</b>
+            <Chip tone="soon">Later</Chip>
           </div>
-          <p className="text-[11px] text-muted">p-values and test results are in the tab “Statistical tests (for the report)”.</p>
+          <p className="mt-1 text-xs text-muted">{d.explain_later}</p>
         </div>
       </Card>
 
-      <Card className="col-span-6" title="By driving condition" subtitle="Energy saving of the design made for each condition.">
-        <PlotlyChart data={condData} layout={layout} />
-      </Card>
-      <Card className="col-span-6" title="By design" subtitle="Energy saving, with the reduction in drag area (Cd × frontal area).">
-        <PlotlyChart data={designData} layout={layout} />
-      </Card>
+      <div className="col-span-7 grid min-h-0 grid-cols-2 gap-3">
+        <Card title="By Driving Condition" subtitle="Energy saving of the design made for each condition.">
+          <PlotlyChart data={condData} layout={layout} />
+        </Card>
+        <Card title="By Design" subtitle="Energy saving, with the reduction in drag area (Cd × frontal area).">
+          <PlotlyChart data={designData} layout={layout} />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+const STATUS: Record<ExplainItem["status"], { label: string; tone: "ok" | "warn" | "soon" | "brand" | "bench" }> = {
+  in_data: { label: "In the data", tone: "ok" },
+  not_separable: { label: "Cannot separate yet", tone: "warn" },
+  needs_data: { label: "Needs more data", tone: "soon" },
+  fixed: { label: "Same for all results", tone: "brand" },
+  cost_only: { label: "Cost only", tone: "bench" },
+};
+
+function ExplainList({ items }: { items: ExplainItem[] }) {
+  return (
+    <div className="space-y-2">
+      {items.map((it) => {
+        const st = STATUS[it.status];
+        return (
+          <div key={it.factor} className="rounded-xl border border-line p-2.5">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <b className="text-[13px]">{it.factor}</b>
+                <span className="ml-2 text-[11px] text-muted">{it.group}</span>
+              </div>
+              <Chip tone={st.tone}>{st.label}</Chip>
+            </div>
+            <p className="mt-1 text-xs leading-snug text-muted">{it.text}</p>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -267,6 +303,33 @@ function Verdict({ p, alpha, n }: { p: number | null; alpha: number; n: number }
   );
 }
 
+/** The test result in plain words. Only says what the p-value shows. It never claims a cause. */
+const ALPHA = 0.05; // same significance level the backend uses
+const TERM_NAMES: Record<string, string> = {
+  cd_reduction_pct: "Cd reduction (drag)",
+  avg_speed_kmh: "Average speed",
+};
+
+function Meaning({ lines }: { lines: string[] }) {
+  return (
+    <div className="mt-2 rounded-xl border border-brand/20 bg-brand/5 p-2.5 text-xs leading-snug">
+      <b>In plain words:</b>
+      <ul className="mt-1 space-y-1">
+        {lines.map((t) => (
+          <li key={t} className="flex gap-2">
+            <span className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-brand" />
+            <span>{t}</span>
+          </li>
+        ))}
+        <li className="flex gap-2 text-muted">
+          <span className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-soon" />
+          <span>"Significant" means unlikely to be just chance. It does not prove the cause.</span>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
 function TTestView({ r }: { r: TTest }) {
   return (
     <>
@@ -283,6 +346,15 @@ function TTestView({ r }: { r: TTest }) {
         ]}
       />
       <Verdict p={r.p_value} alpha={r.alpha} n={r.n_pairs} />
+      {r.p_value !== null && r.mean_before !== null && r.mean_after !== null && (
+        <Meaning
+          lines={[
+            r.p_value < r.alpha
+              ? `The optimized design uses ${r.mean_after < r.mean_before ? "less" : "more"} energy than the baseline (${num(r.mean_before, 1)} → ${num(r.mean_after, 1)} Wh/km), and this is unlikely to be just chance.`
+              : `The data does not clearly show a difference in energy between the baseline and the optimized design. With ${r.n_pairs} pairs it could be chance.`,
+          ]}
+        />
+      )}
       {r.note && <p className="mt-2 text-xs text-muted">{r.note}</p>}
     </>
   );
@@ -306,6 +378,15 @@ function CorrView({ r }: { r: Corr }) {
         ]}
       />
       <p className="mt-3 text-xs text-muted">{r.note}</p>
+      {r.pearson_r !== null && r.pearson_p !== null && (
+        <Meaning
+          lines={[
+            r.pearson_p < ALPHA
+              ? `There is a clear relationship between speed and saving: when the average speed is higher, the saving is ${r.pearson_r > 0 ? "larger" : "smaller"} (r = ${num(r.pearson_r, 2)}). It is unlikely to be just chance.`
+              : `No clear relationship between speed and saving in this data (r = ${num(r.pearson_r, 2)}). Any link seen could be chance.`,
+          ]}
+        />
+      )}
     </>
   );
 }
@@ -339,6 +420,22 @@ function RegView({ r }: { r: Reg }) {
         <p key={w} className="mt-2 text-xs text-[#9a6a14]">{w}</p>
       ))}
       <p className="mt-3 text-xs text-muted">{r.note}</p>
+      {r.f_p_value !== null && (
+        <Meaning
+          lines={[
+            r.f_p_value < ALPHA
+              ? `Together, ${r.predictors.map((x) => TERM_NAMES[x] ?? x).join(" and ")} explain part of the saving (R² = ${num(r.r_squared, 2)}). This is unlikely to be just chance.`
+              : "These factors together do not clearly explain the saving in this data.",
+            ...r.coefficients
+              .filter((c) => c.name !== "const" && c.p_value !== null && c.coef !== null)
+              .map((c) =>
+                (c.p_value as number) < ALPHA
+                  ? `${TERM_NAMES[c.name] ?? c.name} has a clear link with the saving: a higher value goes with a ${(c.coef as number) > 0 ? "larger" : "smaller"} saving.`
+                  : `${TERM_NAMES[c.name] ?? c.name}: no clear link with the saving.`,
+              ),
+          ]}
+        />
+      )}
     </>
   );
 }
@@ -368,6 +465,15 @@ function AnovaView({ r }: { r: Anova }) {
       </div>
       <KV rows={[["F statistic", num(r.f_statistic, 3)], ["Effect size (η²)", num(r.eta_squared, 3)]]} />
       <Verdict p={r.p_value} alpha={r.alpha} n={groups.reduce((s, [, g]) => s + g.n, 0)} />
+      {r.p_value !== null && (
+        <Meaning
+          lines={[
+            r.p_value < r.alpha
+              ? "The saving is not the same in every driving condition. The table below shows which conditions differ."
+              : "No clear difference in saving between the driving conditions in this data.",
+          ]}
+        />
+      )}
       <div className="mt-2">
         <PlotlyChart data={data} layout={layout} height={200} />
         <p className="text-center text-xs text-muted">Mean energy saving per condition (bars) and standard deviation (lines)</p>
@@ -434,6 +540,11 @@ function DemoBody({ d }: { d: SampleStats }) {
   );
   return (
     <div className="grid h-full grid-cols-2 content-start gap-3 overflow-auto">
+      <div className="col-span-2 rounded-2xl border border-brand/25 bg-brand/5 p-3 text-[13px] leading-snug">
+        <b>What is 6 × 8?</b> This example has <b>6 driving conditions</b> and <b>8 designs</b>, so <b>48 results</b>.
+        The results from C3 have fewer driving conditions so far, and some tests need more. With 48 results, all four
+        tests can run, so you can see how each one works and how to read it.
+      </div>
       <Card title="Paired t-test (baseline vs optimized energy)" subtitle={d.design} right={<Chip tone="ok">Ready</Chip>}>
         <TTestView r={d.paired_t} />
       </Card>

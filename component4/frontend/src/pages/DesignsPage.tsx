@@ -35,8 +35,8 @@ export default function DesignsPage({ evId, catalog }: { evId: string; catalog: 
     <div className="grid h-full grid-cols-12 gap-3">
       <div className="col-span-7 flex min-h-0 flex-col gap-3">
         <div className="flex flex-none flex-wrap items-center gap-2">
-          <h2 className="text-base font-semibold">Best design · {shortName(ev.ev_model)}</h2>
-          <span className="ml-2 text-xs font-medium text-muted">Rank designs by</span>
+          <h2 className="text-[16px] font-semibold text-ink">Best Design · {shortName(ev.ev_model)}</h2>
+          <span className="ml-2 text-xs font-medium text-muted">Rank Designs By</span>
           <Segmented
             value={rankBy}
             options={RANKS}
@@ -49,7 +49,7 @@ export default function DesignsPage({ evId, catalog }: { evId: string; catalog: 
 
         <Hero best={best} d={d} />
 
-        <Card className="flex-none" title="All optimized designs, ranked" subtitle={d.rule}>
+        <Card className="flex-none" title="All Optimized Designs, Ranked" subtitle={d.rule}>
           <table className="w-full">
             <thead>
               <tr className="border-b border-line">
@@ -87,7 +87,7 @@ export default function DesignsPage({ evId, catalog }: { evId: string; catalog: 
         <Card
           className="min-h-0 flex-1"
           bodyClass="overflow-hidden"
-          title="3D view: baseline and a chosen design"
+          title="3D View: Baseline And A Chosen Design"
           right={
             <div className="flex flex-wrap gap-1">
               {d.designs.map((x) => (
@@ -167,7 +167,7 @@ function SavingsChart({ designs }: { designs: DesignRow[] }) {
   );
   const layout = useMemo(() => ({ barmode: "group", yaxis: { title: { text: "%" }, rangemode: "tozero" } }), []);
   return (
-    <Card className="min-h-0 flex-1" title="Energy, range and cost for each design" subtitle="Each design against the baseline, under the condition it was made for.">
+    <Card className="min-h-0 flex-1" title="Energy, Range And Cost For Each Design" subtitle="Each design against the baseline, under the condition it was made for.">
       <PlotlyChart data={data} layout={layout} />
     </Card>
   );
@@ -176,7 +176,7 @@ function SavingsChart({ designs }: { designs: DesignRow[] }) {
 function ShapeTable({ base, design }: { base: Record<string, number>; design: DesignRow }) {
   const names = Object.keys(base);
   return (
-    <Card className="flex-none" title={`Shape parameters: baseline vs ${design.config_id}`} bodyClass="overflow-hidden">
+    <Card className="flex-none" title={`Shape Parameters: Baseline vs ${design.config_id}`} bodyClass="overflow-hidden">
       <table className="w-full">
         <thead>
           <tr className="border-b border-line">

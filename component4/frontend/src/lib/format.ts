@@ -19,8 +19,9 @@ export const pval = (p: number | null | undefined): string => {
 /** "Expressway (Highway)" -> "Expressway", "Sedan (dummy, ...)" -> "Sedan" */
 export const shortName = (s: string): string => s.split(" (")[0];
 
-/** "SLDC_Urban" -> "Urban", "WLTP" -> "WLTP" */
-export const condShort = (id: string): string => id.replace(/^SLDC_/, "");
+/** "SLDC_Urban" -> "Urban", "SLDC_Suburban" -> "Sub Urban", "WLTP_Urban" -> "WLTP" */
+export const condShort = (id: string): string =>
+  id.replace(/^SLDC_/, "").replace("Suburban", "Sub Urban").replace(/^WLTP_.*/, "WLTP");
 
 /** "windshield_angle_deg" -> "Windshield angle" */
 export const prettyParam = (name: string): string => {

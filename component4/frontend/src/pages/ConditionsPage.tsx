@@ -36,8 +36,8 @@ export default function ConditionsPage({
     <div className="grid h-full grid-cols-12 gap-3">
       <div className="col-span-8 flex min-h-0 flex-col gap-3">
         <div className="flex flex-none flex-wrap items-center gap-2">
-          <h2 className="text-base font-semibold">
-            {d.conditions.length > 1 ? "Chosen driving conditions side by side" : "Chosen driving condition"}
+          <h2 className="text-[16px] font-semibold text-ink">
+            {d.conditions.length > 1 ? "Chosen Driving Conditions Side By Side" : "Chosen Driving Condition"}
           </h2>
           {d.conditions.map((c) => (
             <Chip key={c.condition_id} tone="opt">
@@ -90,40 +90,42 @@ function ConditionCharts({ d }: { d: ConditionsCompare }) {
     [metric],
   );
 
-  const bench = d.benchmark_baseline_energy_wh_per_km;
+  // three bars for each condition: the baseline car on WLTP, the baseline car on the condition, the optimized car on the condition
   const energyData = useMemo(
     () => [
-      { type: "bar", name: "Baseline", x: names, y: rows.map((r) => r.energy_baseline_wh_per_km), marker: { color: BASE } },
-      { type: "bar", name: "Optimized", x: names, y: rows.map((r) => r.energy_optimized_wh_per_km), marker: { color: OPT } },
+      {
+        type: "bar", name: "Baseline on WLTP", x: names, y: rows.map((r) => r.benchmark_energy_wh_per_km),
+        marker: { color: BENCH }, text: rows.map((r) => (r.benchmark_energy_wh_per_km === null ? "" : num(r.benchmark_energy_wh_per_km, 1))),
+        textposition: "outside", cliponaxis: false,
+      },
+      {
+        type: "bar", name: "Baseline", x: names, y: rows.map((r) => r.energy_baseline_wh_per_km),
+        marker: { color: BASE }, text: rows.map((r) => num(r.energy_baseline_wh_per_km, 1)),
+        textposition: "outside", cliponaxis: false,
+      },
+      {
+        type: "bar", name: "Optimized", x: names, y: rows.map((r) => r.energy_optimized_wh_per_km),
+        marker: { color: OPT }, text: rows.map((r) => num(r.energy_optimized_wh_per_km, 1)),
+        textposition: "outside", cliponaxis: false,
+      },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [d],
   );
   const energyLayout = useMemo(
-    () => ({
-      barmode: "group",
-      yaxis: { title: { text: "Energy (Wh/km)" } },
-      shapes:
-        bench === null
-          ? []
-          : [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: bench, y1: bench, line: { color: BENCH, width: 2, dash: "dash" } }],
-      annotations:
-        bench === null
-          ? []
-          : [{ xref: "paper", x: 0, y: bench, text: `WLTP baseline ${bench.toFixed(1)}`, showarrow: false, yanchor: "bottom", xanchor: "left", font: { color: BENCH, size: 11 } }],
-    }),
-    [bench],
+    () => ({ barmode: "group", yaxis: { title: { text: "Energy consumed (Wh/km)" }, rangemode: "tozero" }, margin: { t: 34 } }),
+    [],
   );
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
       <Card
-        title="Savings by driving condition"
+        title="Savings By Driving Condition"
         right={<Segmented value={metric} onChange={setMetric} options={(Object.keys(METRICS) as Metric[]).map((k) => [k, METRICS[k].label])} />}
       >
         <PlotlyChart data={savingData} layout={savingLayout} />
       </Card>
-      <Card title="Energy use: baseline vs optimized" subtitle="Dashed line = the baseline car under WLTP.">
+      <Card title="Energy Consumed: WLTP, Baseline And Optimized" subtitle="WLTP is the standard cycle. Its result is different for each driving condition.">
         <PlotlyChart data={energyData} layout={energyLayout} />
       </Card>
     </div>
@@ -132,7 +134,7 @@ function ConditionCharts({ d }: { d: ConditionsCompare }) {
 
 function ConditionTable({ d }: { d: ConditionsCompare }) {
   return (
-    <Card className="flex-none" title="Results for each chosen condition" subtitle="Each condition uses the optimized design made for it.">
+    <Card className="flex-none" title="Results For Each Chosen Condition" subtitle="Each condition uses the optimized design made for it.">
       <table className="w-full">
         <thead>
           <tr className="border-b border-line">
@@ -170,7 +172,7 @@ function ConditionTable({ d }: { d: ConditionsCompare }) {
 function Insights({ d }: { d: ConditionsCompare }) {
   const byId = Object.fromEntries(d.conditions.map((c) => [c.condition_id, c]));
   return (
-    <Card className="min-h-0 flex-1" title="What the numbers show" subtitle="Plain statements of the results. They do not explain causes.">
+    <Card className="min-h-0 flex-1" title="What The Numbers Show" subtitle="Plain statements of the results. They do not explain causes.">
       <ul className="space-y-1.5 text-[13px] leading-snug">
         {d.insights.map((t, i) => (
           <li key={i} className="flex gap-2">
@@ -214,7 +216,7 @@ function Sensitivity({ evId, options }: { evId: string; options: { id: string; l
   return (
     <Card
       className="flex-none"
-      title="Sensitivity: electricity tariff"
+      title="Sensitivity: Electricity Tariff"
       subtitle="How the cost saving changes if the tariff changes."
       right={
         options.length > 1 ? (
