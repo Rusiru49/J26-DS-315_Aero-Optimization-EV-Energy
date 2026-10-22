@@ -1,0 +1,21 @@
+=== Are the generated (synthetic) Cd labels physically consistent with the real CFD? ===
+
+--- 40 km/h (labeller: shared+ridge, 2 patterns; 1,200 generated shapes)
+   range: generated 0.2981-0.4414, real CFD 0.3204-0.4179; generated mean 0.3663, real mean 0.3661
+   effect of each parameter, min -> max of its range (drag counts):
+   parameter           real CFD (30)  generated (1,200)  same direction?
+   windshield                  +25.0              +21.5  yes
+   spoiler                     +82.6              +83.9  yes
+   boat_tail                   +23.2              +27.6  yes
+   hood                        -27.7              -29.8  yes
+   ground_clearance            +19.5              +18.2  yes
+
+--- 100 km/h (labeller: per_mode+ridge, 2 patterns; 1,200 generated shapes)
+   range: generated 0.2970-0.4385, real CFD 0.3153-0.4173; generated mean 0.3659, real mean 0.3652
+   effect of each parameter, min -> max of its range (drag counts):
+   parameter           real CFD (30)  generated (1,200)  same direction?
+   windshield                  +22.4              +19.0  yes
+   spoiler                     +88.3              +87.9  yes
+   boat_tail                   +23.2              +25.7  yes
+   hood                        -24.7              -27.7  yes
+   ground_clearance            +18.3              +16.7  yes

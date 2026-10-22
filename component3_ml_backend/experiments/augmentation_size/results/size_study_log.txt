@@ -1,0 +1,12 @@
+   running 12 folds, 2 workers
+[Parallel(n_jobs=2)]: Using backend LokyBackend with 2 concurrent workers.
+[Parallel(n_jobs=2)]: Done  12 out of  12 | elapsed: 11.9min finished
+
+=== How many synthetic shapes? Error on held-out REAL designs, drag counts (mean over repeats) ===
+   shapes per speed    xgboost 40km/h   xgboost 100km/h    ann_mlp 40km/h   ann_mlp 100km/h
+      0 (real only)              18.3              18.2              10.6               9.8
+                300              10.0              10.2               9.8               9.2
+                600              10.0               9.4              10.3               8.7
+     1200  <- today               9.7               9.1              10.6               8.5
+               2400               9.5               9.0              10.5               8.8
+               4800               9.5               9.2              10.1               8.8

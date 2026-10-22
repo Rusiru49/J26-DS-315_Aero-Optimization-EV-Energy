@@ -181,10 +181,41 @@ def fig_helper_versions():
     return fig
 
 
+def fig_augmentation_size():
+    path = os.path.join(config.COMPONENT_ROOT, "experiments", "augmentation_size", "results", "size_study.json")
+    with open(path) as fh:
+        s = json.load(fh)
+    sizes = [int(n) for n in s["mae_counts"]]
+    cols = s["columns"]
+    fig, ax = plt.subplots(figsize=(9, 4.8))
+    styles = {"xgboost_40kmh": (AUG, "-", "o"), "xgboost_100kmh": (AUG, "--", "s"),
+              "ann_mlp_40kmh": (MUTED, "-", "o"), "ann_mlp_100kmh": (MUTED, "--", "s")}
+    names = {"xgboost_40kmh": "XGBoost, 40 km/h", "xgboost_100kmh": "XGBoost, 100 km/h",
+             "ann_mlp_40kmh": "ANN, 40 km/h", "ann_mlp_100kmh": "ANN, 100 km/h"}
+    x = np.arange(len(sizes))
+    for j, c in enumerate(cols):
+        colour, ls, mk = styles[c]
+        ax.plot(x, [s["mae_counts"][str(n)][j] for n in sizes], color=colour, linestyle=ls, marker=mk,
+                linewidth=2, markersize=8, markeredgecolor="white", label=names[c])
+    ax.axvline(list(sizes).index(1200), color=REAL, linestyle=":", linewidth=1.4)
+    ax.text(list(sizes).index(1200) + 0.08, 13.5, "used in Workflow 1", color=REAL, fontsize=9)
+    ax.set_xticks(x, ["0\n(real only)" if n == 0 else f"{n:,}" for n in sizes], fontsize=10, color=INK)
+    ax.set_xlabel("Synthetic shapes added per speed", fontsize=10, color=MUTED)
+    ax.set_ylabel("Cross-validated error on real CFD (drag counts)", fontsize=10, color=MUTED)
+    ax.set_ylim(0, 20)
+    style(ax)
+    ax.grid(axis="x", visible=False), ax.grid(axis="y", color=GRID, linewidth=0.8)
+    ax.legend(frameon=False, fontsize=9, loc="upper right", ncol=2)
+    ax.set_title("Most of the gain comes from the first few hundred synthetic shapes; more than 1,200 adds nothing",
+                 fontsize=12, color=INK, loc="left")
+    return fig
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for name, make in (("pp1_fig1_model_errors", fig_model_errors), ("pp1_fig2_predicted_vs_cfd", fig_predicted_vs_cfd),
-                       ("pp1_fig3_more_data", fig_more_data), ("pp1_fig4_helper_versions", fig_helper_versions)):
+                       ("pp1_fig3_more_data", fig_more_data), ("pp1_fig4_helper_versions", fig_helper_versions),
+                       ("pp1_fig5_augmentation_size", fig_augmentation_size)):
         fig = make()
         path = os.path.join(OUT, f"{name}.png")
         fig.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")

@@ -1,0 +1,13 @@
+=== Sanity check of xgboost+aug (D:\Research\J26-DS-315_Aero-Optimization-EV-Energy\component3_ml_backend\models\member2_sedan_pp1) over the whole design box ===
+
+1. Predicted Cd for 10,000 random shapes inside the box (allowed: CFD range +/- 20 counts)
+   40 km/h: predicted 0.2966 to 0.4455; CFD 0.3204 to 0.4179; outside the allowed range: 0.11%  CHECK
+   100 km/h: predicted 0.2961 to 0.4432; CFD 0.3153 to 0.4173; outside the allowed range: 0.02%  CHECK
+
+2. Baseline D000, predicted vs CFD:
+   40 km/h: predicted 0.3698, CFD 0.3709, difference -1.1 counts
+   100 km/h: predicted 0.3688, CFD 0.3668, difference +2.0 counts
+
+3. Frontal area for the same shapes: 2.1071 to 2.2592 m2; CFD 2.1102 to 2.2533 m2; outside (+/- 2%): 0.00%  PASS
+
+Overall: CHECK the lines marked CHECK
