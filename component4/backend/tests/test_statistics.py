@@ -84,18 +84,14 @@ def test_descriptive():
 
 
 def test_live_statistics_on_current_dummy_data(store, settings):
-    """3 pairs, 1 value per condition: t-test, correlation, regression meet their method minimum
-    and show n; ANOVA cannot run (needs at least 2 values per condition)."""
+    """Each design is tested under its own condition only: 2 pairs. The paired t-test can run
+    (minimum 2 pairs); the other three methods stay locked and say why."""
     r = st.live_statistics(store, settings)
-    assert r["n_pairs"] == 3
+    assert r["n_pairs"] == 2
     cards = {t["id"]: t for t in r["tests"]}
-    assert cards["paired_t"]["status"] == "ready" and cards["paired_t"]["result"]["n_pairs"] == 3
-    assert cards["correlation"]["status"] == "ready" and cards["correlation"]["result"]["n"] == 3
-    assert cards["regression"]["status"] == "ready" and cards["regression"]["result"]["n"] == 3
-    assert cards["regression"]["result"]["predictors"] == ["avg_speed_kmh"]  # Cd reduction does not vary
-    assert cards["anova"]["status"] == "locked" and cards["anova"]["result"] is None
-    assert cards["anova"]["reason"] and "values per condition" in cards["anova"]["have"]
-
+    assert cards["paired_t"]["status"] == "ready" and cards["paired_t"]["result"]["n_pairs"] == 2
+    for k in ("anova", "correlation", "regression"):
+        assert cards[k]["status"] == "locked" and cards[k]["reason"]
 
 def test_live_statistics_locks_when_below_method_minimum(make_store, settings):
     def one_condition(p):  # keep only Urban results -> a single pair

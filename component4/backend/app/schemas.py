@@ -17,6 +17,7 @@ class Configuration(_Base):
     config_id: str
     type: Literal["baseline", "optimized"]
     optimized_from: Optional[str] = None
+    optimized_for: Optional[str] = None   # the driving condition this design was made for
     frontal_area_m2: float
     cd: float
     cd_uncertainty: Optional[float] = None

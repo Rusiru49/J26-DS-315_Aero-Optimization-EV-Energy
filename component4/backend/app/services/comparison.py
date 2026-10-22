@@ -41,12 +41,25 @@ def _shape_changes(store: DataStore, base, opt) -> list[dict]:
     return out
 
 
+def pick_design(store: DataStore, ev_id: str, condition_id: str,
+                optimized_config_id: Optional[str] = None):
+    """The optimized design to use: the one asked for; else the design made for this condition;
+    else (for example WLTP, which has no design of its own) the best overall design."""
+    if optimized_config_id is None:
+        own = [c for c in store.optimized_configs(ev_id) if c.optimized_for == condition_id]
+        if own:
+            return own[0]
+        from .designs import best_config_id  # imported here to avoid a circular import
+        optimized_config_id = best_config_id(store, ev_id)
+    return store.optimized_config(ev_id, optimized_config_id)
+
+
 def compare(store: DataStore, ev_id: str, condition_id: str,
             optimized_config_id: Optional[str] = None) -> dict:
     ev = store.get_ev(ev_id)
     cond = store.get_condition(condition_id)
     base = store.baseline_config(ev_id)
-    opt = store.optimized_config(ev_id, optimized_config_id)
+    opt = pick_design(store, ev_id, condition_id, optimized_config_id)
 
     head = {
         "ev_id": ev_id, "ev_model": ev.ev_model, "mass_kg": ev.mass_kg,
@@ -54,6 +67,7 @@ def compare(store: DataStore, ev_id: str, condition_id: str,
         "condition_id": condition_id,
         "condition_label": CONDITION_LABELS.get(condition_id, condition_id),
         "baseline_config_id": base.config_id, "optimized_config_id": opt.config_id,
+        "optimized_for": opt.optimized_for,
         "meta": store.meta(),
     }
 
@@ -81,6 +95,26 @@ def compare(store: DataStore, ev_id: str, condition_id: str,
             "range_gain_km": c3.range_gain_km - s["range_gain_km"],
             "cost_saving_lkr_per_100km": c3.cost_saving_lkr_per_100km - s["cost_saving_lkr_per_100km"],
         }
+
+    # the baseline car under the benchmark (WLTP), so the user can compare it with this condition
+    benchmark = None
+    bench_cond = next((c for c in store.available_conditions() if c.group == "standard"), None)
+    if bench_cond is not None and bench_cond.condition_id != condition_id:
+        bb = store.row(ev_id, bench_cond.condition_id, base.config_id)
+        if bb is not None:
+            benchmark = {
+                "condition_id": bench_cond.condition_id,
+                "condition_label": CONDITION_LABELS.get(bench_cond.condition_id, bench_cond.condition_id),
+                "baseline": {"energy_wh_per_km": bb.energy_wh_per_km, "range_km": bb.range_km,
+                             "cost_lkr_per_100km": bb.cost_lkr_per_100km},
+                # selected condition minus benchmark
+                "difference": {
+                    "baseline_energy_wh_per_km": rb.energy_wh_per_km - bb.energy_wh_per_km,
+                    "baseline_energy_pct": (rb.energy_wh_per_km - bb.energy_wh_per_km) / bb.energy_wh_per_km * 100,
+                    "baseline_range_km": rb.range_km - bb.range_km,
+                    "baseline_cost_lkr_per_100km": rb.cost_lkr_per_100km - bb.cost_lkr_per_100km,
+                },
+            }
 
     return {
         **head,
@@ -110,6 +144,7 @@ def compare(store: DataStore, ev_id: str, condition_id: str,
                 "'no clear difference'." if within else
                 "The Cd difference is larger than the model's error."),
         },
+        "benchmark": benchmark,
         "shape_changes": _shape_changes(store, base, opt),
         "c3_cross_check": cross,
         "caution": "Predicted results (not experimentally validated)."

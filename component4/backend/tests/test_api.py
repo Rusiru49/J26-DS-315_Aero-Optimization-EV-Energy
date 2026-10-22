@@ -35,24 +35,27 @@ def test_not_found_and_bad_input(client):
     assert client.get("/api/comparison", params={"ev_id": "EV01", "condition_id": "Nope"}).status_code == 404
     assert client.get("/api/sensitivity", params={"ev_id": "EV01", "condition_id": "WLTP",
                                                   "tariff_change_pct": 900}).status_code == 422
-    assert client.get("/api/mix", params={"ev_id": "EV01", "share_a_pct": 150}).status_code == 422
     assert client.get("/api/comparison").status_code == 422  # missing parameters
 
 
 def test_function_2_endpoints(client):
     c = client.get("/api/conditions/compare", params={"ev_id": "EV01"}).json()
-    assert c["benchmark_condition"] == "WLTP" and len(c["conditions"]) == 3
+    assert c["benchmark_condition"] == "WLTP" and len(c["conditions"]) == 2
+    one = client.get("/api/conditions/compare",
+                     params={"ev_id": "EV01", "conditions": "SLDC_Urban"}).json()
+    assert [r["condition_id"] for r in one["conditions"]] == ["SLDC_Urban"]
+    assert client.get("/api/conditions/compare",
+                      params={"ev_id": "EV01", "conditions": "SLDC_Nope"}).status_code == 404
     s = client.get("/api/sensitivity", params={"ev_id": "EV01", "condition_id": "SLDC_Expressway"}).json()
     assert s["cd_check"]["within_uncertainty"] is False and len(s["tariff"]["sweep"]) == 5
-    m = client.get("/api/mix", params={"ev_id": "EV01", "share_a_pct": 70}).json()
-    assert m["available"] and m["distance_km"] == 100 and m["over_distance"]["cost_saving_lkr"] > 0
+    assert client.get("/api/mix", params={"ev_id": "EV01"}).status_code == 404   # the mix route was removed
 
 
 def test_data_quality_and_statistics_endpoints(client):
     assert client.get("/api/data-quality").json()["status"] == "pass"
     live = client.get("/api/statistics/live").json()
     status = {t["id"]: t["status"] for t in live["tests"]}
-    assert status["anova"] == "locked" and status["paired_t"] == "ready"
+    assert status == {"paired_t": "ready", "anova": "locked", "correlation": "locked", "regression": "locked"}
     sample = client.get("/api/statistics/sample").json()
     assert sample["anova"]["significant"] is True and "synthetic" not in str(sample).lower()
 

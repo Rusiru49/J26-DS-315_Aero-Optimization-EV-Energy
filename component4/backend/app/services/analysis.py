@@ -1,17 +1,15 @@
-"""Function 2: driving-condition comparison (WLTP benchmark vs local) and sensitivity analysis.
+"""Function 2: compare driving conditions with each other (each with its own optimized design),
+plus sensitivity analysis.
 
 Everything here is arithmetic on the numbers C3 sent. No modelling assumptions are added:
 - Condition comparison: differences and ratios of C3's own results.
 - Cd check: the Cd change compared with C3's own `cd_uncertainty` (C3's definition).
 - Tariff sensitivity: C3's cost is energy x tariff / charging efficiency (checked by the
   data quality module), so cost changes in direct proportion to the tariff.
-- Driving mix: a weighted average of C3's results using the mix the user chooses.
 """
 from typing import Optional
 
-from scipy import stats
-
-from .comparison import compare, savings
+from .comparison import compare, pick_design
 from .store import CONDITION_LABELS, DataStore
 
 
@@ -20,87 +18,80 @@ def _short(label: str) -> str:
 
 
 # ------------------------------------------------------------------ insights
-def _insights(rows: list[dict], benchmark: str, predicted_only: bool) -> list[str]:
+def _insights(rows: list[dict], bench_energy: Optional[float], predicted_only: bool) -> list[str]:
     """Plain statements of what the numbers show. No explanations of cause."""
     out = []
     if not rows:
         return ["No driving conditions with results yet."]
-    top = max(rows, key=lambda r: r["saving_pct"])
-    low = min(rows, key=lambda r: r["saving_pct"])
+    for r in rows:
+        if r["baseline_vs_benchmark_pct"] is not None and bench_energy:
+            diff = r["baseline_vs_benchmark_pct"]
+            word = "above" if diff >= 0 else "below"
+            out.append(f"{_short(r['label'])}: the baseline car uses {r['energy_baseline_wh_per_km']:.1f} Wh/km, "
+                       f"{abs(diff):.1f}% {word} its WLTP value ({bench_energy:.1f} Wh/km).")
     if len(rows) > 1:
+        top = max(rows, key=lambda r: r["saving_pct"])
+        low = min(rows, key=lambda r: r["saving_pct"])
         out.append(f"The saving is highest under {_short(top['label'])} ({top['saving_pct']:.1f}%) "
                    f"and lowest under {_short(low['label'])} ({low['saving_pct']:.1f}%).")
-    bench = next((r for r in rows if r["condition_id"] == benchmark), None)
-    if bench is not None:
-        for r in rows:
-            if r["condition_id"] == benchmark:
-                continue
-            diff = r["saving_pct"] - bench["saving_pct"]
-            word = "above" if diff >= 0 else "below"
-            out.append(f"{_short(r['label'])}: {r['saving_pct']:.1f}% saving, {abs(diff):.1f} "
-                       f"percentage points {word} the {_short(bench['label'])} benchmark "
-                       f"({bench['saving_pct']:.1f}%).")
-    urban = next((r for r in rows if r["condition_id"] == "SLDC_Urban"), None)
-    exp_ = next((r for r in rows if r["condition_id"] == "SLDC_Expressway"), None)
-    if urban and exp_ and urban["saving_pct"] > 0:
-        out.append(f"The Expressway saving is {exp_['saving_pct'] / urban['saving_pct']:.1f} times "
-                   f"the Urban saving.")
-    sp = sorted((r["avg_speed_kmh"], r["saving_pct"], _short(r["label"]))
-                for r in rows if r["avg_speed_kmh"] is not None)
-    if len(sp) >= 3:
-        rho = stats.spearmanr([a for a, _, _ in sp], [b for _, b, _ in sp]).statistic
-        if rho == 1.0:
-            order = ", ".join(f"{n} {a:.0f} km/h" for a, _, n in sp)
-            out.append(f"In this data the saving rises with the condition's average speed ({order}).")
-    elif len(sp) == 2 and sp[0][0] != sp[1][0] and sp[1][1] > sp[0][1]:
-        out.append(f"The condition with the higher average speed ({sp[1][2]}, {sp[1][0]:.0f} km/h) "
-                   f"has the larger saving.")
+        out.append("Each condition uses its own optimized design, so a difference between conditions "
+                   "also includes the difference between the designs.")
     if predicted_only:
         out.append("These are predicted results (not experimentally validated).")
     return out
 
 
 def condition_comparison(store: DataStore, ev_id: str, benchmark: str,
-                         optimized_config_id: Optional[str] = None) -> dict:
+                         condition_ids: Optional[list[str]] = None) -> dict:
+    """The user picks any number of conditions; each is shown with its own optimized design
+    (baseline vs the design found for that condition) next to the others."""
     store.get_ev(ev_id)
-    opt = store.optimized_config(ev_id, optimized_config_id)
+    base = store.baseline_config(ev_id)
+    for cid in condition_ids or []:
+        store.get_condition(cid)        # unknown id -> NotFound (404)
+    bench_row = None
+    if any(c.condition_id == benchmark for c in store.available_conditions()):
+        bench_row = store.row(ev_id, benchmark, base.config_id)
+    bench_energy = None if bench_row is None else bench_row.energy_wh_per_km
+
     rows = []
     for cond in store.available_conditions():
-        c = compare(store, ev_id, cond.condition_id, opt.config_id)
+        if cond.condition_id == benchmark:
+            continue
+        if condition_ids is not None and cond.condition_id not in condition_ids:
+            continue
+        c = compare(store, ev_id, cond.condition_id)
         if not c["available"]:
             continue
         s = c["savings"]
+        eb = c["baseline"]["energy_wh_per_km"]
         rows.append({
             "condition_id": cond.condition_id,
             "label": CONDITION_LABELS.get(cond.condition_id, cond.condition_id),
             "group": cond.group, "avg_speed_kmh": cond.avg_speed_kmh,
             "max_speed_kmh": cond.max_speed_kmh, "idle_fraction": cond.idle_fraction,
             "distance_km": cond.distance_km,
-            "energy_baseline_wh_per_km": c["baseline"]["energy_wh_per_km"],
+            "design_id": c["optimized_config_id"],
+            "energy_baseline_wh_per_km": eb,
             "energy_optimized_wh_per_km": c["optimized"]["energy_wh_per_km"],
+            "baseline_vs_benchmark_pct": (None if not bench_energy
+                                          else (eb - bench_energy) / bench_energy * 100),
             "saving_pct": s["energy_saving_pct"], "energy_saving_wh_per_km": s["energy_saving_wh_per_km"],
             "range_gain_km": s["range_gain_km"], "range_gain_pct": s["range_gain_pct"],
             "cost_saving_lkr_per_100km": s["cost_saving_lkr_per_100km"],
             "cost_saving_pct": s["cost_saving_pct"],
         })
-    bench = next((r for r in rows if r["condition_id"] == benchmark), None)
-    for r in rows:
-        if bench is None:
-            r["vs_benchmark_pct_points"], r["vs_benchmark_ratio"] = None, None
-        else:
-            r["vs_benchmark_pct_points"] = r["saving_pct"] - bench["saving_pct"]
-            r["vs_benchmark_ratio"] = (r["saving_pct"] / bench["saving_pct"]
-                                       if bench["saving_pct"] else None)
     ranking = [r["condition_id"] for r in sorted(rows, key=lambda r: -r["saving_pct"])]
     return {
-        "ev_id": ev_id, "optimized_config_id": opt.config_id,
-        "benchmark_condition": benchmark if bench else None,
+        "ev_id": ev_id,
+        "benchmark_condition": benchmark if bench_energy is not None else None,
+        "benchmark_baseline_energy_wh_per_km": bench_energy,
         "conditions": rows,
         "coming_soon": [{"condition_id": c.condition_id,
                          "label": CONDITION_LABELS.get(c.condition_id, c.condition_id)}
                         for c in store.coming_soon_conditions()],
         "ranking": ranking,
-        "insights": _insights(rows, benchmark, store.meta()["predicted_only"]),
+        "insights": _insights(rows, bench_energy, store.meta()["predicted_only"]),
         "meta": store.meta(),
     }
 
@@ -111,7 +102,7 @@ def sensitivity(store: DataStore, ev_id: str, condition_id: str,
                 tariff_change_pct: float = 0.0) -> dict:
     """Cd change vs C3's uncertainty, and how the cost saving moves with the tariff."""
     base = store.baseline_config(ev_id)
-    opt = store.optimized_config(ev_id, optimized_config_id)
+    opt = pick_design(store, ev_id, condition_id, optimized_config_id)
     rb = store.row(ev_id, condition_id, base.config_id)
     ro = store.row(ev_id, condition_id, opt.config_id)
     if rb is None or ro is None:
@@ -149,51 +140,5 @@ def sensitivity(store: DataStore, ev_id: str, condition_id: str,
                    "sweep": [tariff_case(p) for p in (-20, -10, 0, 10, 20)],
                    "note": "C3's cost = energy x tariff / charging efficiency, so cost changes in "
                            "direct proportion to the tariff. The % saving stays the same."},
-        "meta": store.meta(),
-    }
-
-
-# ---------------------------------------------------------------- what-if mix
-def mix(store: DataStore, ev_id: str, condition_a: str, condition_b: str,
-        share_a_pct: float, distance_km: float,
-        optimized_config_id: Optional[str] = None) -> dict:
-    """Weighted average of C3's results for a driving mix chosen by the user (by distance share)."""
-    if not 0 <= share_a_pct <= 100:
-        raise ValueError("share_a_pct must be between 0 and 100.")
-    if distance_km < 0:
-        raise ValueError("distance_km must not be negative.")
-    ev = store.get_ev(ev_id)
-    base = store.baseline_config(ev_id)
-    opt = store.optimized_config(ev_id, optimized_config_id)
-    rows = {}
-    for key, cid in (("a", condition_a), ("b", condition_b)):
-        rb = store.row(ev_id, cid, base.config_id)
-        ro = store.row(ev_id, cid, opt.config_id)
-        if rb is None or ro is None:
-            return {"available": False, "status": "coming_soon",
-                    "message": f"Results for {CONDITION_LABELS.get(cid, cid)} are not available yet."}
-        rows[key] = (rb, ro)
-    wa, wb = share_a_pct / 100, 1 - share_a_pct / 100
-
-    def blend(field, which):
-        return wa * getattr(rows["a"][which], field) + wb * getattr(rows["b"][which], field)
-
-    e_b, e_o = blend("energy_wh_per_km", 0), blend("energy_wh_per_km", 1)
-    c_b, c_o = blend("cost_lkr_per_100km", 0), blend("cost_lkr_per_100km", 1)
-    # range follows C3's definition: usable battery x 1000 / energy per km
-    r_b, r_o = ev.usable_battery_kwh * 1000 / e_b, ev.usable_battery_kwh * 1000 / e_o
-    s = savings(e_b, e_o, r_b, r_o, c_b, c_o)
-    return {
-        "available": True, "ev_id": ev_id, "optimized_config_id": opt.config_id,
-        "condition_a": {"id": condition_a, "label": CONDITION_LABELS.get(condition_a, condition_a),
-                        "share_pct": share_a_pct},
-        "condition_b": {"id": condition_b, "label": CONDITION_LABELS.get(condition_b, condition_b),
-                        "share_pct": 100 - share_a_pct},
-        "distance_km": distance_km,
-        "blended": {"baseline_energy_wh_per_km": e_b, "optimized_energy_wh_per_km": e_o,
-                    "baseline_range_km": r_b, "optimized_range_km": r_o, **s},
-        "over_distance": {"energy_saved_kwh": s["energy_saving_wh_per_km"] * distance_km / 1000,
-                          "cost_saving_lkr": s["cost_saving_lkr_per_100km"] * distance_km / 100},
-        "note": "The driving mix (share of distance) and the distance are chosen by the user.",
         "meta": store.meta(),
     }

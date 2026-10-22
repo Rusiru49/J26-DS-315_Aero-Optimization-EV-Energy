@@ -54,7 +54,7 @@ def main() -> int:
         check("3 conditions available, 3 coming soon",
               avail == ["WLTP", "SLDC_Urban", "SLDC_Expressway"], str(avail))
 
-        for cond in ("WLTP", "SLDC_Urban", "SLDC_Expressway"):
+        for cond in ("SLDC_Urban", "SLDC_Expressway"):
             t0 = time.perf_counter()
             r = c4.get("/api/comparison", params={"ev_id": "EV01", "condition_id": cond})
             ms = (time.perf_counter() - t0) * 1000
@@ -63,14 +63,12 @@ def main() -> int:
                   r.status_code == 200 and j["savings"]["energy_saving_wh_per_km"] > 0 and ms < 2000)
 
         j = c4.get("/api/conditions/compare", params={"ev_id": "EV01"}).json()
-        check("function 2 condition comparison", len(j["conditions"]) == 3 and j["benchmark_condition"] == "WLTP")
+        check("function 2 condition comparison", len(j["conditions"]) == 2 and j["benchmark_condition"] == "WLTP")
         j = c4.get("/api/sensitivity", params={"ev_id": "EV01", "condition_id": "SLDC_Urban"}).json()
         check("function 2 sensitivity", j["cd_check"]["within_uncertainty"] is False)
-        j = c4.get("/api/mix", params={"ev_id": "EV01", "share_a_pct": 60}).json()
-        check("function 2 what-if mix", j["available"] is True)
         check("data quality", c4.get("/api/data-quality").json()["status"] == "pass")
         live = {t["id"]: t["status"] for t in c4.get("/api/statistics/live").json()["tests"]}
-        check("statistics: ANOVA locked (1 value per condition), t-test ready",
+        check("statistics: t-test ready, ANOVA locked (1 value per condition)",
               live["anova"] == "locked" and live["paired_t"] == "ready", str(live))
         check("statistics sample runs", "anova" in c4.get("/api/statistics/sample").json())
 

@@ -1,7 +1,7 @@
 """Generate the DUMMY C3 data package used while real C3 data is not available.
 
 Format = the format agreed with C3 (docs/C4_Request_to_C3_Data_Package.md).
-Scope for PP1: one sedan, one baseline + one optimized design FOR EACH driving condition,
+Scope for PP1: one sedan, one baseline + one optimized design for each of Urban and Expressway,
   - WLTP  (sample benchmark)
   - SLDC_Urban
   - SLDC_Expressway
@@ -37,7 +37,8 @@ BASE_SHAPE = {
 }
 
 # One optimized design for each SLDC driving condition that has its own design (Urban, Expressway).
-# WLTP is the benchmark: it has no design of its own, but every design is tested under WLTP too.
+# A design has results only under the condition it was made for.
+# WLTP is the benchmark: it has no design of its own; only the baseline has a WLTP result.
 # config_id, optimized_for, cd, cd_uncertainty, frontal_area, shape parameters
 DESIGNS = [
     ("EV01_OPT1", "SLDC_Urban", 0.208, 0.004, 2.28,
@@ -64,7 +65,7 @@ SHAPE_DEFS = [
 # condition_id, group, avg_speed, max_speed, idle_fraction, distance_km
 CONDITIONS = [
     ("WLTP", "standard", 46.5, 131.3, 0.13, 23.27),
-    ("SLDC_Urban", "sldc", 21.8, 40.0, 0.24, 9.6),
+    ("SLDC_Urban", "sldc", 21.8, 50.0, 0.24, 9.6),
     ("SLDC_Suburban", "sldc", None, None, None, None),
     ("SLDC_Intercity", "sldc", None, None, None, None),
     ("SLDC_Expressway", "sldc", 94.5, 100.0, 0.01, 26.4),
@@ -93,8 +94,11 @@ def build() -> dict:
         eb = BASE_ENERGY[cond]
         rb = row("EV01_BASE", cond, eb)
         results.append(rb)
-        # every optimized design is evaluated under every condition
+        # each optimized design is evaluated only under the condition it was made for.
+        # WLTP is the benchmark: only the baseline is evaluated under it (for now).
         for (cfg_id, _for, cd, unc, area, _shape) in DESIGNS:
+            if _for != cond:
+                continue
             cda_ratio = (cd * area) / base_cda
             eo = eb * (1 - DRAG_SHARE[cond] * (1 - cda_ratio))
             ro = row(cfg_id, cond, eo)

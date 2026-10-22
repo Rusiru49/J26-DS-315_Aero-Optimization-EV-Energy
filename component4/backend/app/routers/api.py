@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 
 from ..config import Settings
 from ..deps import get_settings, get_store
-from ..services import analysis, comparison, statistics, validation
+from ..services import analysis, comparison, designs, factors, statistics, validation
 from ..services.store import CONDITION_LABELS, DataStore
 
 router = APIRouter(prefix="/api")
@@ -56,11 +56,12 @@ def get_comparison(ev_id: str, condition_id: str, optimized_config_id: Optional[
 
 # ---- Function 2 -------------------------------------------------------------
 @router.get("/conditions/compare")
-def conditions_compare(ev_id: str, optimized_config_id: Optional[str] = None,
+def conditions_compare(ev_id: str, conditions: Optional[str] = None,
                        store: DataStore = Depends(get_store),
                        settings: Settings = Depends(get_settings)):
-    return analysis.condition_comparison(store, ev_id, settings.benchmark_condition,
-                                         optimized_config_id)
+    """`conditions` = comma-separated condition ids to compare (default: all that have results)."""
+    ids = [c for c in conditions.split(",") if c] if conditions else None
+    return analysis.condition_comparison(store, ev_id, settings.benchmark_condition, ids)
 
 
 @router.get("/sensitivity")
@@ -71,14 +72,16 @@ def get_sensitivity(ev_id: str, condition_id: str, optimized_config_id: Optional
                                 tariff_change_pct)
 
 
-@router.get("/mix")
-def get_mix(ev_id: str, condition_a: str = "SLDC_Urban", condition_b: str = "SLDC_Expressway",
-            share_a_pct: float = Query(50.0, ge=0, le=100),
-            distance_km: float = Query(100.0, ge=0, le=1_000_000),
-            optimized_config_id: Optional[str] = None,
-            store: DataStore = Depends(get_store)):
-    return analysis.mix(store, ev_id, condition_a, condition_b, share_a_pct,
-                        distance_km, optimized_config_id)
+# ---- best design (ranking of the optimized designs) --------------------------
+@router.get("/designs")
+def get_designs(ev_id: str, rank_by: str = "overall", store: DataStore = Depends(get_store)):
+    return designs.ranking(store, ev_id, rank_by)
+
+
+# ---- what affects the saving (plain view for engineers) ----------------------
+@router.get("/factors")
+def get_factors(store: DataStore = Depends(get_store)):
+    return factors.factor_analysis(store)
 
 
 # ---- data quality and statistics -------------------------------------------

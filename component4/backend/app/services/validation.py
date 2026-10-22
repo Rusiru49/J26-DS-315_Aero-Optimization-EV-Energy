@@ -69,6 +69,8 @@ def run_validation(store: DataStore, settings: Settings) -> dict:
         if not opts:
             problems.append(f"{ev.ev_id}: no optimized configuration")
         for o in opts:
+            if o.optimized_for and o.optimized_for not in {c.condition_id for c in cat.conditions}:
+                problems.append(f"{o.config_id}: optimized_for '{o.optimized_for}' is not a known condition")
             if bases and o.optimized_from != bases[0].config_id:
                 problems.append(f"{o.config_id}: optimized_from '{o.optimized_from}' "
                                 f"is not the baseline of {ev.ev_id}")
@@ -90,22 +92,31 @@ def run_validation(store: DataStore, settings: Settings) -> dict:
                 f"{len(store.coming_soon_conditions())} coming soon.")
 
     # 4. completeness of the results grid (+ duplicates)
+    #    baseline: one row under every available condition.
+    #    optimized design: one row under the condition it was made for (every condition if none is named).
     miss, dups = [], []
     for ev in cat.evs:
         for cond in store.available_conditions():
             rows = store.prediction(ev.ev_id, cond.condition_id).results
             counts = Counter(r.config_id for r in rows)
             for c in ev.configurations:
-                if counts.get(c.config_id, 0) == 0:
+                expected = (c.type == "baseline" or not c.optimized_for
+                            or c.optimized_for == cond.condition_id)
+                if expected and counts.get(c.config_id, 0) == 0:
                     miss.append(f"{c.config_id}@{cond.condition_id}")
-                elif counts[c.config_id] > 1:
+                elif counts.get(c.config_id, 0) > 1:
                     dups.append(f"{c.config_id}@{cond.condition_id}")
+    for ev in cat.evs:
+        for c in ev.configurations:
+            if c.type == "optimized" and c.optimized_for and store.is_available(c.optimized_for) is False:
+                miss.append(f"{c.config_id}@{c.optimized_for} (condition has no results)")
     if miss or dups:
         rep.add("completeness", "Results grid complete", "fail",
                 f"missing: {miss}; duplicates: {dups}")
     else:
         rep.add("completeness", "Results grid complete", "pass",
-                "Every configuration has exactly one result row for each available condition.")
+                "The baseline has a result row for each available condition, and each optimized design "
+                "has one for the condition it was made for.")
 
     # 5. valid numbers: finite and above zero (a fraction must be between 0 and 1)
     bad = []

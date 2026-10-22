@@ -90,11 +90,18 @@ class DataStore:
     def optimized_configs(self, ev_id: str) -> list[Configuration]:
         return [c for c in self.get_ev(ev_id).configurations if c.type == "optimized"]
 
-    def optimized_config(self, ev_id: str, config_id: Optional[str] = None) -> Configuration:
+    def optimized_config(self, ev_id: str, config_id: Optional[str] = None,
+        for_condition: Optional[str] = None) -> Configuration:
+        """The optimized design asked for. With no id: the design made for `for_condition`
+        (if there is one), otherwise the first optimized design."""
         opts = self.optimized_configs(ev_id)
         if not opts:
             raise NotFound(f"EV '{ev_id}' has no optimized configuration")
         if config_id is None:
+            if for_condition:
+                for c in opts:
+                    if c.optimized_for == for_condition:
+                        return c
             return opts[0]
         for c in opts:
             if c.config_id == config_id:
@@ -155,4 +162,4 @@ class DataStore:
             "source_mode": self.client.mode,
             "loaded_at": self.loaded_at,
             "load_seconds": self.load_seconds,
-        }
+        }   
