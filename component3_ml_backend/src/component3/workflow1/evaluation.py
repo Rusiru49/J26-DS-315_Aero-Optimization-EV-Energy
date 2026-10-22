@@ -32,6 +32,12 @@ speed is the uncertainty reported with it.
 Diagnostic: the augmented models are also scored on extra synthetic shapes the
 helper labelled but the models never saw. A small error there and a large one
 on real designs means the helper, not the drag model, is the weak link.
+
+Per-label quality (workflow1/label_quality.py): every synthetic label carries
+its own uncertainty, calibrated against held-out real CFD, and must pass
+physical plausibility checks and lie in the validated region, or it is left
+out of the augmented dataset. The checks run inside every fold, so their
+effect is tested fairly too.
 """
 
 import numpy as np
@@ -40,6 +46,7 @@ import pandas as pd
 from component3 import config
 from component3.workflow1.augmentation import propose_shapes
 from component3.workflow1.helper import fit_helper, label_shapes, select_labeller_arrays
+from component3.workflow1.label_quality import check_labels, predict_labels
 from component3.workflow1.pod import dataset_arrays, fit_pod_arrays
 from component3.workflow1.training import AREA_CANDIDATE_BUILDERS, CANDIDATE_BUILDERS, FineTunedANN, real_weights
 
@@ -87,13 +94,41 @@ def build_labeller(a):
     return pod, fit_helper(a["x_unit"], amps, kind), choice
 
 
-def augmented_table(a, pod, helper, method, seed):
-    """Real training rows + N_SYNTHETIC_SHAPES physics-labelled LHS shapes (5 shape
-    values; the speed column is added by the caller)."""
-    shapes = propose_shapes(config.N_SYNTHETIC_SHAPES, seed=seed)
-    x = np.vstack([a["x_raw"], _shapes_table(shapes)])
-    y = np.concatenate([a["cd"], label_shapes(helper, pod, shapes, method)])
-    return x, y
+def _unit(x_raw):
+    lo = np.array([config.SHAPE_PARAM_BOUNDS[n][0] for n in config.SHAPE_PARAM_NAMES])
+    hi = np.array([config.SHAPE_PARAM_BOUNDS[n][1] for n in config.SHAPE_PARAM_NAMES])
+    return (np.asarray(x_raw, dtype=np.float64) - lo) / (hi - lo)
+
+
+def labelled_shapes(a, pod, helper, method, seed):
+    """N_SYNTHETIC_SHAPES LHS shapes with their label, raw uncertainty and the
+    per-label checks (one row each; "keep" says whether the label is used)."""
+    x = _shapes_table(propose_shapes(config.N_SYNTHETIC_SHAPES, seed=seed))
+    u = _unit(x)
+    amps, cd, sigma = predict_labels(helper, pod, u, method)
+    checks = check_labels(pod, amps, u, cd, a["x_unit"], a["cd"])
+    table = pd.DataFrame(x, columns=config.SHAPE_PARAM_NAMES)
+    table["cd_label"], table["sigma_raw"] = cd, sigma
+    return pd.concat([table, checks], axis=1)
+
+
+def augmented_table(a, pod, helper, method, seed, with_labels=False):
+    """Real training rows + the physics-labelled LHS shapes that pass the per-label
+    checks (5 shape values; the speed column is added by the caller)."""
+    t = labelled_shapes(a, pod, helper, method, seed)
+    kept = t[t["keep"]]
+    x = np.vstack([a["x_raw"], kept[config.SHAPE_PARAM_NAMES].to_numpy(dtype=np.float64)])
+    y = np.concatenate([a["cd"], kept["cd_label"].to_numpy(dtype=np.float64)])
+    return (x, y, t) if with_labels else (x, y)
+
+
+def label_quality_summary(t):
+    """Share of synthetic labels kept, and of each check failed."""
+    return {"n_proposed": int(len(t)), "kept": float(t["keep"].mean()),
+            "out_of_region": float((~t["in_validated_region"]).mean()),
+            "cp_above_stagnation": float((~t["cp_below_stagnation"]).mean()),
+            "pressure_drag_not_positive": float((~t["pressure_drag_positive"]).mean()),
+            "cd_out_of_range": float((~t["cd_in_range"]).mean())}
 
 
 def build_training_sets(blocks, seed, with_diagnostic=False):
@@ -102,8 +137,9 @@ def build_training_sets(blocks, seed, with_diagnostic=False):
     parts = {}
     for s, a in blocks.items():
         pod, helper, choice = build_labeller(a)
-        x_aug, y_aug = augmented_table(a, pod, helper, choice[1], seed)   # same seed: same shapes at every speed
-        part = {"pod": pod, "helper": helper, "choice": choice, "x_aug": x_aug, "y_aug": y_aug, "a": a}
+        # same seed: same shapes at every speed
+        x_aug, y_aug, labels = augmented_table(a, pod, helper, choice[1], seed, with_labels=True)
+        part = {"pod": pod, "helper": helper, "choice": choice, "x_aug": x_aug, "y_aug": y_aug, "a": a, "labels": labels}
         if with_diagnostic:
             diag = propose_shapes(N_DIAGNOSTIC_SHAPES, seed=seed + 50_000)
             part["x_diag"], part["y_diag"] = _shapes_table(diag), label_shapes(helper, pod, diag, choice[1])
@@ -156,7 +192,8 @@ def run_fold(arrays, test_ids, seed, settings=None):
     for s, p in parts.items():
         kind, method, n_modes = p["choice"]
         out[s]["choice"] = f"{kind}+{method}, {n_modes} patterns"
-        out[s]["label"] = label_shapes(p["helper"], p["pod"], [dict(zip(config.SHAPE_PARAM_NAMES, r)) for r in tests[s]["x"]], method)
+        _, out[s]["label"], out[s]["label_std"] = predict_labels(p["helper"], p["pod"], _unit(tests[s]["x"]), method)
+        out[s]["label_quality"] = label_quality_summary(p["labels"])
     for c in CANDIDATES:
         model = fit_candidate(c, stacked)
         for s in arrays:
@@ -204,18 +241,19 @@ def cross_validate(datasets, n_folds=None, n_repeats=None, progress=print, n_job
         # BLAS threads ran an 8 GB laptop out of memory
         with parallel_config(backend="loky", inner_max_num_threads=1):
             folds = Parallel(n_jobs=n_jobs)(delayed(run_fold)(arrays, te, seed, _settings()) for _, _, te, seed in jobs)
-    records, choices = [], {s: [] for s in datasets}
+    records, choices, quality = [], {s: [] for s in datasets}, {s: [] for s in datasets}
     for (rep, f, _, _), fold in zip(jobs, folds):
         for s, r in fold.items():
             choices[s].append(r["choice"])
+            quality[s].append(r["label_quality"])
             for i, rid in enumerate(r["ids"]):
                 rec = {"repeat": rep, "fold": f, "speed": s, "run_id": rid, "cd": r["cd"][i], "area": r["area"][i],
-                       "label": r["label"][i]}
+                       "label": r["label"][i], "label_std": r["label_std"][i]}
                 rec.update({k: v[i] for k, v in r["pred"].items()})
                 rec.update({f"diag:{k}": v for k, v in r["diag"].items()})
                 records.append(rec)
     return {"oof": pd.DataFrame(records), "labeller_choices": choices, "n_folds": n_folds, "n_repeats": n_repeats,
-            "n_testable": len(testable)}
+            "n_testable": len(testable), "label_quality": {s: pd.DataFrame(q).mean().to_dict() for s, q in quality.items()}}
 
 
 def for_speed(cv, speed):
@@ -276,7 +314,9 @@ def train_final(datasets, candidate, seed=config.RANDOM_STATE):
         return fit_candidate(candidate, stacked), info
     parts, stacked = build_training_sets(blocks, seed)
     info.update(labeller={s: "{}+{}, {} patterns".format(*p["choice"]) for s, p in parts.items()},
-                n_synthetic_per_speed=config.N_SYNTHETIC_SHAPES)
+                n_synthetic_per_speed=config.N_SYNTHETIC_SHAPES,
+                synthetic_kept_per_speed={s: int(p["labels"]["keep"].sum()) for s, p in parts.items()},
+                synthetic_labels={s: p["labels"] for s, p in parts.items()})
     return fit_candidate(candidate, stacked), info
 
 

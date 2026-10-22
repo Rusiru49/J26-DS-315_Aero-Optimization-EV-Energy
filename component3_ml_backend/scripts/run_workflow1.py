@@ -33,6 +33,7 @@ from component3.data.checker import check_dataset
 from component3.data.loader import load_cfd_dataset
 from component3.workflow1.evaluation import (INPUT_NAMES, augmentation_wins, choose_candidate, cross_validate,
                                              for_speed, summarise, train_final, train_final_area)
+from component3.workflow1.label_quality import calibrated_sigma, calibration_report
 from component3.workflow1.pod import dataset_arrays, exact_cd_from_faces, fit_pod_arrays
 
 COUNTS = 1000  # 1 drag count = 0.001 Cd
@@ -102,11 +103,21 @@ def main():
             print(f"   {c:26s} {r.mae * COUNTS:6.1f} +/- {r.mae_spread * COUNTS:4.1f}   worst {r.worst * COUNTS:5.1f}")
         print("   diagnostic - augmented models vs synthetic shapes they never saw: "
               + ", ".join(f"{m} {v * COUNTS:.1f}" for m, v in diag.items()))
+        q = cv["label_quality"][s]
+        print(f"   synthetic labels kept after the per-label checks: {q['kept']:.1%} of {q['n_proposed']:.0f} "
+              f"(outside validated region {q['out_of_region']:.1%}, Cp above stagnation {q['cp_above_stagnation']:.1%}, "
+              f"pressure drag not positive {q['pressure_drag_not_positive']:.1%}, Cd out of range {q['cd_out_of_range']:.1%})")
+        cal = calibration_report(cv_s["oof"])
+        per_speed[s] = per_speed[s] + (cal,)
+        print(f"   per-label uncertainty, calibrated on held-out real CFD: real Cd inside +/-1 sigma {cal['coverage_1sigma']:.0%} "
+              f"(ideal 68%), inside +/-2 sigma {cal['coverage_2sigma']:.0%} (ideal 95%); typical sigma "
+              f"{cal['median_sigma'] * COUNTS:.1f} counts")
 
     winner, ranking = choose_candidate(cv)
     print(f"\n6. Chosen drag model: {winner} (lowest cross-validated error averaged over the speeds). "
           f"Augmentation {'is NOT' if winner.endswith('+real') else 'IS'} used.")
     model, info = train_final(datasets, winner)
+    synthetic = info.pop("synthetic_labels", {})
     tag = os.path.basename(os.path.normpath(first.data_dir))
     model_dir = os.path.join(config.MODELS_DIR, tag)
     os.makedirs(model_dir, exist_ok=True)
@@ -136,14 +147,25 @@ def main():
         "cd_error_by_speed": {str(s): e for s, e in errors.items()},
         "frontal_area_error_mae_percent": float(area_table.iloc[0]["mae_percent"]),
         "validation": validation,
+        "synthetic_label_checks": {str(k): v for k, v in cv["label_quality"].items()},
+        "synthetic_label_uncertainty_calibration": {str(k): per_speed[k][4] for k in speeds},
     }
     with open(os.path.join(model_dir, "model_card.json"), "w") as fh:
         json.dump(card, fh, indent=2, default=float)
 
-    # per-speed result files (the PP1 figures read these)
+    # every synthetic label of the final model, with its calibrated uncertainty and checks
     os.makedirs(config.OUTPUTS_DIR, exist_ok=True)
+    for s, t in synthetic.items():
+        t = t.copy()
+        t.insert(t.columns.get_loc("sigma_raw") + 1, "sigma_calibrated", calibrated_sigma(t["sigma_raw"], (per_speed[s][4]["a"], per_speed[s][4]["b"])))
+        t.to_csv(os.path.join(config.OUTPUTS_DIR, f"workflow1_{tag}_{s}kmh_synthetic_labels.csv"), index=False)
+    if synthetic:
+        print(f"\n   every synthetic label with its own calibrated uncertainty and checks: "
+              f"outputs/workflow1_{tag}_<speed>kmh_synthetic_labels.csv")
+
+    # per-speed result files (the PP1 figures read these)
     for s in speeds:
-        cv_s, table, area_t, diag = per_speed[s]
+        cv_s, table, area_t, diag, cal = per_speed[s]
         summary = {
             "dataset": tag, "speed_kmh": s, "drag_model": winner, "one_model_all_speeds": True,
             "n_designs": int(len(datasets[s].runs)), "n_testable": cv["n_testable"], "validation": validation,
@@ -153,6 +175,7 @@ def main():
             "augmentation_wins": {m: augmentation_wins(cv_s, m) for m in ("xgboost", "random_forest", "ann_mlp")},
             "frontal_area_results": area_t.to_dict("records"),
             "ranking_mean_over_speeds_counts": (ranking * COUNTS).round(2).to_dict(),
+            "synthetic_label_checks": cv["label_quality"][s], "label_uncertainty_calibration": cal,
         }
         with open(os.path.join(config.OUTPUTS_DIR, f"workflow1_{tag}_{s}kmh.json"), "w") as fh:
             json.dump(summary, fh, indent=2, default=float)

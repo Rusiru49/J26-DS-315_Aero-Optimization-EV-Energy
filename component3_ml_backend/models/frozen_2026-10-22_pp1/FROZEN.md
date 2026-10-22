@@ -4,7 +4,7 @@ This is a copy of `models/member2_sedan_pp1/` as presented at PP1. **Do not retr
 
 - Trained on Member 2's PP1 delivery: 30 sedan shapes x 2 speeds (40, 100 km/h).
 - Model: XGBoost + physics-labelled augmentation; inputs = 5 shape values + speed in km/h.
-- Cross-validated error: 9.8 drag counts at 40 km/h, 8.8 at 100 km/h (see model_card.json).
+- Cross-validated error: 9.6 drag counts at 40 km/h, 8.9 at 100 km/h (see model_card.json). Synthetic labels pass per-label physics checks and carry a calibrated uncertainty.
 
 **Purpose: an independent (blind) test.** When Member 2 delivers NEW shapes (not among the 30), predict
 their Cd with THIS model before any retraining (inputs: the 5 shape values + speed_kmh, in the order of

@@ -26,6 +26,10 @@
     "100": "per_mode+ridge, 2 patterns"
   },
   "n_synthetic_per_speed": 1200,
+  "synthetic_kept_per_speed": {
+    "40": 1196,
+    "100": 1199
+  },
   "drag_model_file": "drag_model.joblib",
   "frontal_area_model": "quadratic_ridge",
   "frontal_area_model_file": "frontal_area_model.joblib",
@@ -67,16 +71,50 @@
   },
   "cd_error_by_speed": {
     "40": {
-      "mae": 0.00980822686571063,
-      "rmse": 0.012817663197168507,
-      "worst": 0.031225957155227635
+      "mae": 0.009619451205658186,
+      "rmse": 0.012693578348318723,
+      "worst": 0.029491069459915142
     },
     "100": {
-      "mae": 0.008818497604312315,
-      "rmse": 0.011778431385844983,
-      "worst": 0.032923686218261694
+      "mae": 0.008898930421742524,
+      "rmse": 0.011880174081819617,
+      "worst": 0.03204570980072019
     }
   },
   "frontal_area_error_mae_percent": 0.003287461411106682,
-  "validation": "cross-validation by design, 4 groups x 3 repeats, 22 testable designs hidden at every speed, scored on real CFD only"
+  "validation": "cross-validation by design, 4 groups x 3 repeats, 22 testable designs hidden at every speed, scored on real CFD only",
+  "synthetic_label_checks": {
+    "40": {
+      "n_proposed": 1200.0,
+      "kept": 0.9826388888888887,
+      "out_of_region": 0.005625000000000001,
+      "cp_above_stagnation": 0.0,
+      "pressure_drag_not_positive": 0.0,
+      "cd_out_of_range": 0.012222222222222223
+    },
+    "100": {
+      "n_proposed": 1200.0,
+      "kept": 0.9914583333333334,
+      "out_of_region": 0.005625000000000001,
+      "cp_above_stagnation": 0.0,
+      "pressure_drag_not_positive": 0.0,
+      "cd_out_of_range": 0.0029861111111111113
+    }
+  },
+  "synthetic_label_uncertainty_calibration": {
+    "40": {
+      "a": 3.161687271681115e-08,
+      "b": 0.012885756765013426,
+      "coverage_1sigma": 0.696969696969697,
+      "coverage_2sigma": 0.8484848484848485,
+      "median_sigma": 0.012885756765013428
+    },
+    "100": {
+      "a": 2.0677056572807047,
+      "b": 0.009006100042506834,
+      "coverage_1sigma": 0.6666666666666666,
+      "coverage_2sigma": 0.9090909090909091,
+      "median_sigma": 0.010620732697837998
+    }
+  }
 }

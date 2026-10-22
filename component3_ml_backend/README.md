@@ -30,7 +30,7 @@ component3_ml_backend/
 ├── experiments/               research tests, kept apart from the product code
 │   ├── drivaerml/             tests on the public DrivAerML CFD data (CC BY-SA 4.0)
 │   └── cfd2d_standin/         2D OpenFOAM stand-in in Member 2's format (Google Colab notebook)
-├── tests/                     pytest (63 tests)
+├── tests/                     pytest (69 tests)
 ├── docs/research_papers/      papers used in the proposal
 ├── data/                      datasets used (in git): placeholder_sedan, cfd2d_sedan, scale_test_sedan
 ├── models/                    trained drag and frontal-area models, one folder per dataset and speed
@@ -104,7 +104,8 @@ Workflow 1, the energy model and the optimiser are built and tested (60 tests).
   - a helper study (`experiments/helper_study/`) found where the labeller loses accuracy: patterns beyond the first two cannot be predicted from 30 shapes and pulled extreme shapes toward the average. Choosing the number of patterns by cross-validation (version H3, mostly 2 patterns) won at both speeds among 5 versions fixed in advance, and is now part of Workflow 1;
   - with it the labels are 9.8 / 8.8 off (14.0 / 13.0 before), and **augmentation beats training on the real designs alone for every model**: XGBoost 9.7 / 9.1 vs 18.2 / 17.2, Random Forest 10.3 / 9.6 vs 16.1 / 14.8, ANN 10.1 / 9.3 vs 10.1 / 10.8;
   - **one drag model for all speeds** (inputs: the 5 shape values + speed in km/h; `experiments/speed_study/` showed it is as accurate as one model per speed, and it scales to new CFD speeds). Saved in `models/member2_sedan_pp1/`;
-  - the pipeline chooses **XGBoost + physics-labelled augmentation** (9.8 / 8.8 drag counts at 40 / 100 km/h, about 2.5%); augmentation beats real-only training for every model at both speeds;
+  - the pipeline chooses **XGBoost + physics-labelled augmentation** (9.6 / 8.9 drag counts at 40 / 100 km/h, about 2.5%); augmentation beats real-only training for every model at both speeds;
+  - **every synthetic label** carries its own uncertainty (calibrated on held-out real CFD: the real Cd falls inside +/-1 sigma 67-70% of the time, inside +/-2 sigma 85-91%) and must pass physics checks on its own rebuilt pressure field (Cp below the stagnation limit, positive pressure drag, Cd in the CFD range) and lie in the validated region; 98-99% pass. Table: `outputs/workflow1_<dataset>_<speed>kmh_synthetic_labels.csv`;
   - remaining limit: about 6 counts are lost because 30 shapes cannot describe every new shape's pressure; more shapes are needed for that part;
   - PP1 figures: `python scripts/make_pp1_figures.py` writes `outputs/figures/pp1_fig*.png`; run logs are in `outputs/logs/`.
 

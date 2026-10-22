@@ -17,24 +17,30 @@
 5. Results on REAL designs only, drag counts (mean over repeats +/- spread, worst design):
    --- 40 km/h
    helper labels (label check)         9.8 +/-  1.6   worst  30.9
-   xgboost        with augmentation    9.8 +/-  1.4   real only   18.3 +/-  2.2   (augmentation better in 3/3 repeats)
-   random_forest  with augmentation   10.1 +/-  1.5   real only   16.3 +/-  2.3   (augmentation better in 3/3 repeats)
-   ann_mlp        with augmentation   10.2 +/-  1.9   real only   10.6 +/-  0.7   (augmentation better in 2/3 repeats)
-   ann_mlp+aug_weighted         10.2 +/-  1.7   worst  34.3
-   ann_mlp+pretrain_finetune    10.2 +/-  1.9   worst  35.0
-   diagnostic - augmented models vs synthetic shapes they never saw: xgboost 3.1, random_forest 4.4, ann_mlp 2.4
+   xgboost        with augmentation    9.6 +/-  1.3   real only   18.3 +/-  2.2   (augmentation better in 3/3 repeats)
+   random_forest  with augmentation   10.3 +/-  1.4   real only   16.3 +/-  2.3   (augmentation better in 3/3 repeats)
+   ann_mlp        with augmentation    9.9 +/-  1.9   real only   10.6 +/-  0.7   (augmentation better in 2/3 repeats)
+   ann_mlp+aug_weighted         10.2 +/-  1.5   worst  32.0
+   ann_mlp+pretrain_finetune     9.9 +/-  1.9   worst  35.8
+   diagnostic - augmented models vs synthetic shapes they never saw: xgboost 3.2, random_forest 4.6, ann_mlp 2.5
+   synthetic labels kept after the per-label checks: 98.3% of 1200 (outside validated region 0.6%, Cp above stagnation 0.0%, pressure drag not positive 0.0%, Cd out of range 1.2%)
+   per-label uncertainty, calibrated on held-out real CFD: real Cd inside +/-1 sigma 70% (ideal 68%), inside +/-2 sigma 85% (ideal 95%); typical sigma 12.9 counts
    --- 100 km/h
    helper labels (label check)         8.8 +/-  2.1   worst  33.4
-   xgboost        with augmentation    8.8 +/-  1.4   real only   18.2 +/-  1.8   (augmentation better in 3/3 repeats)
-   random_forest  with augmentation    9.2 +/-  1.4   real only   15.9 +/-  1.5   (augmentation better in 3/3 repeats)
-   ann_mlp        with augmentation    8.7 +/-  1.9   real only    9.8 +/-  0.2   (augmentation better in 2/3 repeats)
-   ann_mlp+aug_weighted          9.5 +/-  2.0   worst  37.1
-   ann_mlp+pretrain_finetune     8.7 +/-  1.9   worst  33.1
-   diagnostic - augmented models vs synthetic shapes they never saw: xgboost 2.6, random_forest 3.8, ann_mlp 1.8
+   xgboost        with augmentation    8.9 +/-  1.3   real only   18.2 +/-  1.8   (augmentation better in 3/3 repeats)
+   random_forest  with augmentation    9.5 +/-  1.3   real only   15.9 +/-  1.5   (augmentation better in 3/3 repeats)
+   ann_mlp        with augmentation    8.8 +/-  2.0   real only    9.8 +/-  0.2   (augmentation better in 2/3 repeats)
+   ann_mlp+aug_weighted          9.3 +/-  2.1   worst  37.1
+   ann_mlp+pretrain_finetune     8.8 +/-  2.0   worst  34.2
+   diagnostic - augmented models vs synthetic shapes they never saw: xgboost 2.6, random_forest 3.9, ann_mlp 1.8
+   synthetic labels kept after the per-label checks: 99.1% of 1200 (outside validated region 0.6%, Cp above stagnation 0.0%, pressure drag not positive 0.0%, Cd out of range 0.3%)
+   per-label uncertainty, calibrated on held-out real CFD: real Cd inside +/-1 sigma 67% (ideal 68%), inside +/-2 sigma 91% (ideal 95%); typical sigma 10.6 counts
 
 6. Chosen drag model: xgboost+aug (lowest cross-validated error averaged over the speeds). Augmentation IS used.
    one model, inputs ['windshield_angle_deg', 'spoiler_angle_deg', 'boat_tail_angle_deg', 'hood_angle_deg', 'ground_clearance_mm', 'speed_kmh']; retrained on all designs at all speeds, saved to D:\Research\J26-DS-315_Aero-Optimization-EV-Energy\component3_ml_backend\models\member2_sedan_pp1
-   expected error on a new shape at 40 km/h: about 9.8 drag counts (RMSE 12.8, worst seen 31.2)
-   expected error on a new shape at 100 km/h: about 8.8 drag counts (RMSE 11.8, worst seen 32.9)
+   expected error on a new shape at 40 km/h: about 9.6 drag counts (RMSE 12.7, worst seen 29.5)
+   expected error on a new shape at 100 km/h: about 8.9 drag counts (RMSE 11.9, worst seen 32.0)
 
 7. Frontal-area model (geometry, no speed): quadratic_ridge, cross-validated error mean 0.00%, worst 0.02%
+
+   every synthetic label with its own calibrated uncertainty and checks: outputs/workflow1_member2_sedan_pp1_<speed>kmh_synthetic_labels.csv

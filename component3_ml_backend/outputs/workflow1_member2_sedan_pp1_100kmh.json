@@ -23,10 +23,10 @@
   "results_counts": [
     {
       "candidate": "xgboost+aug",
-      "mae": 8.82,
-      "mae_spread": 1.36,
-      "rmse": 11.78,
-      "worst": 32.92
+      "mae": 8.9,
+      "mae_spread": 1.26,
+      "rmse": 11.88,
+      "worst": 32.05
     },
     {
       "candidate": "xgboost+real",
@@ -37,10 +37,10 @@
     },
     {
       "candidate": "random_forest+aug",
-      "mae": 9.19,
-      "mae_spread": 1.45,
-      "rmse": 12.11,
-      "worst": 30.01
+      "mae": 9.52,
+      "mae_spread": 1.35,
+      "rmse": 12.47,
+      "worst": 30.92
     },
     {
       "candidate": "random_forest+real",
@@ -51,10 +51,10 @@
     },
     {
       "candidate": "ann_mlp+aug",
-      "mae": 8.73,
-      "mae_spread": 1.95,
-      "rmse": 11.52,
-      "worst": 33.14
+      "mae": 8.82,
+      "mae_spread": 2.01,
+      "rmse": 11.66,
+      "worst": 34.2
     },
     {
       "candidate": "ann_mlp+real",
@@ -65,17 +65,17 @@
     },
     {
       "candidate": "ann_mlp+aug_weighted",
-      "mae": 9.51,
-      "mae_spread": 2.02,
-      "rmse": 12.5,
-      "worst": 37.1
+      "mae": 9.27,
+      "mae_spread": 2.1,
+      "rmse": 12.29,
+      "worst": 37.06
     },
     {
       "candidate": "ann_mlp+pretrain_finetune",
-      "mae": 8.73,
-      "mae_spread": 1.94,
-      "rmse": 11.51,
-      "worst": 33.09
+      "mae": 8.8,
+      "mae_spread": 2.0,
+      "rmse": 11.64,
+      "worst": 34.15
     },
     {
       "candidate": "label",
@@ -86,9 +86,9 @@
     }
   ],
   "diagnostic_counts": {
-    "xgboost": 2.59,
-    "random_forest": 3.82,
-    "ann_mlp": 1.83
+    "xgboost": 2.6,
+    "random_forest": 3.86,
+    "ann_mlp": 1.82
   },
   "augmentation_wins": {
     "xgboost": [
@@ -117,13 +117,28 @@
     }
   ],
   "ranking_mean_over_speeds_counts": {
-    "xgboost+aug": 9.31,
-    "ann_mlp+pretrain_finetune": 9.47,
-    "ann_mlp+aug": 9.49,
-    "random_forest+aug": 9.63,
-    "ann_mlp+aug_weighted": 9.83,
+    "xgboost+aug": 9.26,
+    "ann_mlp+pretrain_finetune": 9.34,
+    "ann_mlp+aug": 9.36,
+    "ann_mlp+aug_weighted": 9.71,
+    "random_forest+aug": 9.91,
     "ann_mlp+real": 10.22,
     "random_forest+real": 16.08,
     "xgboost+real": 18.25
+  },
+  "synthetic_label_checks": {
+    "n_proposed": 1200.0,
+    "kept": 0.9914583333333334,
+    "out_of_region": 0.005625000000000001,
+    "cp_above_stagnation": 0.0,
+    "pressure_drag_not_positive": 0.0,
+    "cd_out_of_range": 0.0029861111111111113
+  },
+  "label_uncertainty_calibration": {
+    "a": 2.0677056572807047,
+    "b": 0.009006100042506834,
+    "coverage_1sigma": 0.6666666666666666,
+    "coverage_2sigma": 0.9090909090909091,
+    "median_sigma": 0.010620732697837998
   }
 }
