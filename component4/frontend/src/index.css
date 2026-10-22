@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #f3f8fb;
+  --color-surface: #ffffff;
+  --color-ink: #16344d;
+  --color-muted: #5d7589;
+  --color-line: #dce7ef;
+  --color-brand: #1d7fa6;
+  --color-base: #4a86c5;   /* baseline design */
+  --color-opt: #19a58e;    /* optimized design */
+  --color-bench: #7a6fc8;  /* WLTP benchmark */
+  --color-warn: #d9962b;
+  --color-bad: #d2564b;
+  --color-soon: #c9d5de;
+  --font-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* Dashboard: the page fills the screen and does not scroll. Panels scroll inside if needed. */
+#root {
+  min-width: 1100px;
+  min-height: 600px;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: auto;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-line);
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-opt);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(22, 52, 77, 0.35);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-opt);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(22, 52, 77, 0.35);
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-line);
+}
+
+select,
+input[type="number"] {
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  color: var(--color-ink);
+}
