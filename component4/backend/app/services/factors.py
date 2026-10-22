@@ -18,6 +18,7 @@ from statsmodels.stats.anova import anova_lm
 from .store import CONDITION_LABELS, DataStore
 
 MIN_EVS_FOR_VEHICLE_FACTORS = 3
+ALPHA = 0.05 
 
 
 def _f(x) -> Optional[float]:
@@ -209,12 +210,23 @@ def factor_analysis(store: DataStore) -> dict:
             f"On average the saving is highest under {_short(top['label'])} "
             f"({top['mean_saving_pct']:.1f}%) and lowest under {_short(low['label'])} "
             f"({low['mean_saving_pct']:.1f}%).")
-    # each design is tested under one condition only: condition and design cannot be separated
+        
+    # does the saving go up or down with the average speed of the condition? (needs 3+ conditions)
     one_cond_per_design = bool((df.groupby("design").condition.nunique() == 1).all())
-    if one_cond_per_design and n_design >= 2:
-        insights.append(
-            "Each design was tested under one driving condition only, so the effect of the condition and "
-            "the effect of the design cannot be separated yet.")
+    if len(by_condition) >= 3:
+        xs = [c["avg_speed_kmh"] for c in by_condition]
+        ys = [c["mean_saving_pct"] for c in by_condition]
+        if all(x is not None for x in xs) and len(set(xs)) > 1 and len(set(ys)) > 1:
+            res = stats.pearsonr(xs, ys)
+            r, p = float(res.statistic), float(res.pvalue)
+            if p < ALPHA:
+                insights.append(
+                    f"Across the {len(xs)} driving conditions, a higher average speed goes with a "
+                    f"{'larger' if r > 0 else 'smaller'} saving (r = {r:.2f}).")
+            else:
+                insights.append(
+                    f"Across the {len(xs)} driving conditions, there is no clear link between "
+                    f"average speed and the saving (r = {r:.2f}).")
     if n_design >= 2 and any(len(g) >= 2 for _, g in df.groupby("condition")):
         agree = True
         for _, g in df.groupby("condition"):
@@ -224,10 +236,6 @@ def factor_analysis(store: DataStore) -> dict:
         if agree:
             insights.append("Under every driving condition, the design with the larger reduction in "
                             "drag area (Cd × frontal area) has the larger saving.")
-    if _collinear(df):
-        insights.append(
-            f"Speed, idle share and distance rise together across the {n_cond} conditions here, so their "
-            "effects cannot be told apart yet. More driving conditions (the other SLDC cycles) are needed.")
     insights.append("This shows how the results go together. It does not prove the cause.")
 
     return {

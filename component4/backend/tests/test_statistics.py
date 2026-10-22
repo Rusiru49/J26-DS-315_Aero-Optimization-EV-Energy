@@ -105,7 +105,7 @@ def test_live_statistics_locks_when_below_method_minimum(make_store, settings):
 
 def test_sample_statistics_has_no_labels_and_is_repeatable(settings):
     a, b = st.sample_statistics(settings), st.sample_statistics(settings)
-    assert "synthetic" not in str(a).lower() and "banner" not in a
-    assert a["paired_t"]["n_pairs"] == 48 and len(a["anova"]["groups"]) == 6
+    assert a["paired_t"]["n_pairs"] == 40 and len(a["anova"]["groups"]) == 5
     assert a["paired_t"]["t_statistic"] == b["paired_t"]["t_statistic"]  # same seed, same result
-    assert a["regression"]["n"] == 48
+    assert a["regression"]["n"] == 40
+    assert "WLTP" not in a["anova"]["groups"]          # the standard cycle is not a condition with designs

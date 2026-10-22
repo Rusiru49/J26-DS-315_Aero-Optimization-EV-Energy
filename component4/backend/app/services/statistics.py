@@ -215,10 +215,10 @@ def live_statistics(store: DataStore, settings: Settings) -> dict:
 
 # ------------------------------------------------------------- sample data
 def sample_dataset(seed: int = 42) -> pd.DataFrame:
-    """Generated sample: 6 driving conditions x 8 designs (used to show the methods)."""
+    """Generated sample: 5 driving conditions x 8 designs made for each = 40 baseline-optimized pairs
+    (used to show the methods; WLTP is the standard cycle, not a condition with designs)."""
     rng = np.random.default_rng(seed)
-    speeds = {"Urban": 21.8, "Sub Urban": 37.0, "Rural": 44.0, "WLTP": 46.5,
-              "Intercity": 63.0, "Expressway": 94.5}
+    speeds = {"Urban": 21.8, "Sub Urban": 37.0, "Rural": 44.0, "Intercity": 63.0, "Expressway": 94.5}
     cd_red = np.linspace(4, 12, 8)  # % Cd reduction of 8 candidate designs
     rows = []
     for cond, v in speeds.items():
@@ -236,7 +236,7 @@ def sample_statistics(settings: Settings, seed: int = 42) -> dict:
     df = sample_dataset(seed)
     groups = {c: g.saving_pct.tolist() for c, g in df.groupby("condition", sort=False)}
     return {
-        "design": "6 driving conditions x 8 designs = 48 baseline-optimized pairs",
+        "design": "5 driving conditions x 8 designs for each = 40 baseline-optimized pairs",
         "paired_t": paired_ttest(df.energy_base, df.energy_opt, settings.alpha),
         "anova": anova_tukey(groups, settings.alpha),
         "correlation": correlation(df.avg_speed_kmh, df.saving_pct),

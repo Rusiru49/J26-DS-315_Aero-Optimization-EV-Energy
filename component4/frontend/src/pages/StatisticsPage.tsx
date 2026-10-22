@@ -13,7 +13,7 @@ type Tab = "factors" | "live" | "demo";
 const TABS: { key: Tab; icon: IconName; title: string; text: string }[] = [
   { key: "factors", icon: "layers", title: "What Affects The Saving?", text: "The factors behind the result, explained in plain words." },
   { key: "live", icon: "flask", title: "Statistical Tests", text: "The four tests on the results from C3. Each one shows its n." },
-  { key: "demo", icon: "play", title: "Method Demo", text: "The same four tests on a larger example: 6 driving conditions × 8 designs = 48 results." },
+  { key: "demo", icon: "play", title: "Method Demo", text: "The same four tests on a larger example: 5 driving conditions × 8 designs each = 40 results." },
 ];
 
 export default function StatisticsPage() {
@@ -130,7 +130,33 @@ function FactorsBody({ d }: { d: FactorsOK }) {
             ))}
           </div>
         ) : (
-          <p className="rounded-xl bg-warn/10 p-2.5 text-[13px]">{d.variation_note}</p>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-line">
+                <th className={TH}>Driving condition</th>
+                <th className={TH}>Avg speed</th>
+                <th className={TH}>Idle share</th>
+                <th className={TH}>Design</th>
+                <th className={TH}>Drag area</th>
+                <th className={TH}>Energy saving</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {d.by_condition.map((c) => {
+                const des = d.by_design.find((x) => x.optimized_for === c.condition_id);
+                return (
+                  <tr key={c.condition_id}>
+                    <td className={`${TD} font-medium`}>{shortName(c.label)}</td>
+                    <td className={TD}>{c.avg_speed_kmh === null ? "—" : `${num(c.avg_speed_kmh, 1)} km/h`}</td>
+                    <td className={TD}>{c.idle_fraction === null ? "—" : `${num(c.idle_fraction * 100, 0)} %`}</td>
+                    <td className={TD}>{des?.config_id ?? "—"}</td>
+                    <td className={TD}>{des ? `−${num(des.cda_reduction_pct, 1)} %` : "—"}</td>
+                    <td className={`${TD} font-semibold`}>{num(c.mean_saving_pct, 2)} %</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
         <ul className="mt-3 space-y-1 text-[13px] leading-snug">
           {d.insights.map((x) => (
@@ -541,9 +567,10 @@ function DemoBody({ d }: { d: SampleStats }) {
   return (
     <div className="grid h-full grid-cols-2 content-start gap-3 overflow-auto">
       <div className="col-span-2 rounded-2xl border border-brand/25 bg-brand/5 p-3 text-[13px] leading-snug">
-        <b>What is 6 × 8?</b> This example has <b>6 driving conditions</b> and <b>8 designs</b>, so <b>48 results</b>.
-        The results from C3 have fewer driving conditions so far, and some tests need more. With 48 results, all four
-        tests can run, so you can see how each one works and how to read it.
+          <b>What is 5 × 8?</b> This example has <b>5 driving conditions</b> and <b>8 designs made for each one</b>, so{" "}
+        <b>40 results</b>. The results from C3 have fewer designs so far, and some tests need more (ANOVA needs at least
+        2 results under each condition). With 40 results, all four tests can run, so you can see how each one works
+        and how to read it.
       </div>
       <Card title="Paired t-test (baseline vs optimized energy)" subtitle={d.design} right={<Chip tone="ok">Ready</Chip>}>
         <TTestView r={d.paired_t} />
