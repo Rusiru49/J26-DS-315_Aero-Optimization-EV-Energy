@@ -11,6 +11,8 @@ Writes to outputs/figures/:
     pp1_fig2_predicted_vs_cfd.png    chosen drag model: predicted vs CFD Cd per design
     pp1_fig3_more_data.png           24 vs 30 shapes: labeller and models improve with data
     pp1_fig4_helper_versions.png     five helper versions (experiments/helper_study/compare_helpers.py)
+    pp1_fig5_augmentation_size.png   error vs number of synthetic shapes
+    pp1_fig6_original_vs_augmented.png  slide figure: % error, original vs augmented dataset, per model
 """
 
 import json
@@ -211,11 +213,47 @@ def fig_augmentation_size():
     return fig
 
 
+def fig_original_vs_augmented():
+    """Slide figure: mean % error on held-out real CFD, original (real-only) vs augmented
+    training, per model, over both speeds."""
+    oof = pd.concat([pd.read_csv(os.path.join(config.OUTPUTS_DIR, f"workflow1_{DATASET}_{s}kmh_predictions.csv"))
+                     for s in SPEEDS])
+    models = (("xgboost", "XGBoost"), ("random_forest", "Random Forest"), ("ann_mlp", "ANN"))
+    pct = {c: float(((oof[c] - oof["cd"]).abs() / oof["cd"]).mean() * 100)
+           for m, _ in models for c in (f"{m}+real", f"{m}+aug")}
+    fig, ax = plt.subplots(figsize=(9, 5))
+    x, w = np.arange(len(models)), 0.36
+    real = [pct[f"{m}+real"] for m, _ in models]
+    aug = [pct[f"{m}+aug"] for m, _ in models]
+    ax.bar(x - w / 2, real, w, color=REAL, label="original dataset (real CFD only)", edgecolor="white", linewidth=2)
+    ax.bar(x + w / 2, aug, w, color=AUG, label="augmented dataset (real + physics-labelled)", edgecolor="white",
+           linewidth=2)
+    for xi, r, a in zip(x, real, aug):
+        ax.text(xi - w / 2, r + 0.08, f"{r:.1f}%", ha="center", va="bottom", fontsize=11, color=INK)
+        ax.text(xi + w / 2, a + 0.08, f"{a:.1f}%", ha="center", va="bottom", fontsize=11, color=INK, weight="bold")
+        ax.text(xi, max(r, a) + 0.55, f"error {(r - a) / r:.0%} lower", ha="center", va="bottom", fontsize=10.5,
+                color=AUG, weight="bold")
+    ax.text(x[0] + w / 2, aug[0] / 2, "final\nmodel", ha="center", va="center", fontsize=10.5, color="white",
+            weight="bold")
+    ax.set_xticks(x, [n for _, n in models], fontsize=12, color=INK)
+    ax.set_ylabel("Mean error on held-out real CFD shapes (%)", fontsize=10.5, color=MUTED)
+    ax.set_ylim(0, max(real) + 1.3)
+    style(ax)
+    ax.grid(axis="x", visible=False)
+    ax.grid(axis="y", color=GRID, linewidth=0.8)
+    ax.legend(loc="upper right", frameon=False, fontsize=10)
+    ax.set_title("Drag-prediction error: original vs augmented training data", fontsize=13, color=INK, loc="left")
+    fig.text(0.01, -0.03, "Cross-validation by design, both speeds; every score is on real CFD shapes the model never "
+             "saw. Lower is better.", fontsize=9, color=MUTED)
+    return fig
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for name, make in (("pp1_fig1_model_errors", fig_model_errors), ("pp1_fig2_predicted_vs_cfd", fig_predicted_vs_cfd),
                        ("pp1_fig3_more_data", fig_more_data), ("pp1_fig4_helper_versions", fig_helper_versions),
-                       ("pp1_fig5_augmentation_size", fig_augmentation_size)):
+                       ("pp1_fig5_augmentation_size", fig_augmentation_size),
+                       ("pp1_fig6_original_vs_augmented", fig_original_vs_augmented)):
         fig = make()
         path = os.path.join(OUT, f"{name}.png")
         fig.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")

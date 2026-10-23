@@ -5,6 +5,8 @@ Usage:  python scripts/make_pp1_diagrams.py
 Writes to outputs/figures/:
     pp1_component3_architecture.png   Workflow 1 (done) and Workflow 2 (next), for the design slide
     pp1_workflow1_methodology.png     how the drag model is built and validated, for the methodology slide
+    pp1_design_excellence.png         key design decisions + my deliverables, for the design excellence slide
+    pp1_user_feedback.png             feedback -> action -> status, for the user feedback slide
 """
 
 import os
@@ -173,12 +175,133 @@ def methodology():
     return fig
 
 
+def design_excellence():
+    """Design excellence slide, in the team's style: the key design decisions, each with its
+    reason, and the deliverables of the individual contribution. (The process itself is on the
+    methodology slide.)"""
+    fig, ax = plt.subplots(figsize=(18, 7.55))
+    fig.patch.set_facecolor("white"); ax.set_facecolor("white")
+    ax.set_xlim(0, 18); ax.set_ylim(0, 7.5); ax.axis("off")
+    NAVY, WHY_BG, WHY_INK, BORDER = "#14243F", "#E3F3EC", "#1E6B4E", "#D9DEE6"
+
+    def card(x, y, w, h, face="white", edge=BORDER, lw=1.2):
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0,rounding_size=0.15", facecolor=face,
+                                    edgecolor=edge, linewidth=lw))
+
+    cw, cg = (17.8 - 2 * 0.25) / 3, 0.25
+    ax.text(0.1, 7.27, "KEY DESIGN DECISIONS", fontsize=11, weight="bold", color=NAVY, va="center")
+    decisions = [
+        ("Labels from pressure physics", "Cd is integrated from the rebuilt surface pressure.",
+         "Synthetic labels follow the same physics as CFD."),
+        ("Every label is checked", "Physical limits, CFD range and validated region.",
+         "No unphysical value ever enters training."),
+        ("Hide whole designs, at every speed", "Synthetic data is rebuilt in every fold.",
+         "Nothing leaks from test shapes into training."),
+        ("Judge only on real CFD", "Synthetic shapes train the model, never test it.",
+         "The score measures truth, not the labeller."),
+        ("Augmentation only if it helps", "Real-only and augmented models compete.",
+         "It cannot be fooled by its own data."),
+        ("One model, speed as an input", "One model gives Cd for every speed in the CFD data.",
+         "Scales to new speeds and driving cycles."),
+    ]
+    ch = 1.7
+    for i, (title, what, why) in enumerate(decisions):
+        cx = 0.1 + (i % 3) * (cw + cg)
+        cy = 5.25 - (i // 3) * (ch + 0.2)
+        card(cx, cy, cw, ch)
+        ax.add_patch(plt.Circle((cx + 0.32, cy + ch - 0.33), 0.19, facecolor="#EEF1F5", edgecolor="none"))
+        ax.text(cx + 0.32, cy + ch - 0.33, str(i + 1), fontsize=10, weight="bold", color=NAVY, ha="center",
+                va="center")
+        ax.text(cx + 0.65, cy + ch - 0.33, title, fontsize=12, weight="bold", color=NAVY, va="center")
+        ax.text(cx + 0.2, cy + ch - 0.78, what, fontsize=9.5, color=GREY, va="center")
+        ax.add_patch(FancyBboxPatch((cx + 0.15, cy + 0.14), cw - 0.3, 0.5, boxstyle="round,pad=0,rounding_size=0.08",
+                                    facecolor=WHY_BG, edgecolor="none"))
+        ax.text(cx + 0.28, cy + 0.39, "Why:", fontsize=9.5, weight="bold", color=WHY_INK, va="center")
+        ax.text(cx + 0.85, cy + 0.39, why, fontsize=9.5, color=WHY_INK, va="center")
+
+    ax.text(0.1, 3.0, "MY CONTRIBUTION: WHAT I DELIVERED", fontsize=11, weight="bold", color=NAVY, va="center")
+    delivered = [
+        ("Physics labelling method", "POD pressure modes + Gaussian Process\nlabel unseen shapes (Novelty 1)"),
+        ("Label validation layer", "per-label physics checks and uncertainty\ncalibrated on held-out real CFD"),
+        ("Validated drag model", "Cd and frontal area for any shape and\nspeed, selected by cross-validation"),
+        ("Integration interfaces", "data contract with Member 2 and the\nagreed output format for Member 4"),
+        ("Energy model (Workflow 2 start)", "battery use, range and cost per driving\ncycle; awaits the final cycles"),
+        ("Reproducible, tested codebase", "Python package, automated tests, model\ncard and a frozen blind-test model"),
+    ]
+    dh = 1.2
+    for i, (title, what) in enumerate(delivered):
+        dx = 0.1 + (i % 3) * (cw + cg)
+        dy = 1.5 - (i // 3) * (dh + 0.2)
+        card(dx, dy, cw, dh, face=NAVY, edge=NAVY)
+        ax.text(dx + 0.25, dy + dh - 0.3, title, fontsize=12, weight="bold", color="white", va="center")
+        ax.text(dx + 0.25, dy + dh - 0.55, what, fontsize=9.5, color="#B5C3D6", va="top", linespacing=1.4)
+    return fig
+
+
+def feedback():
+    """User feedback slide: feedback from the people who consume or supply this component
+    (feedback -> action -> status) and the planned task-based user evaluation."""
+    import textwrap
+    fig, ax = plt.subplots(figsize=(18, 6.7))
+    fig.patch.set_facecolor("white"); ax.set_facecolor("white")
+    ax.set_xlim(0, 18); ax.set_ylim(0, 6.65); ax.axis("off")
+    NAVY, BORDER = "#14243F", "#D9DEE6"
+    DONE, WAIT = ("#E3F3EC", "#1E6B4E"), ("#FDF1E4", "#B8650F")
+    items = [
+        ("M4", "Member 4", "Dashboard developer (consumer of model outputs)", "#A8325E",
+         "The dashboard requires quantified energy, range and cost savings relative to the baseline design.",
+         "Extended the output schema with baseline-versus-optimised comparisons of energy, range and cost.",
+         "Agreed and specified", DONE),
+        ("M2", "Member 2", "CFD data provider (supplier of training data)", "#1F5FA8",
+         "The delivered CFD dataset uses a revised design space and flags several morphs as low-confidence.",
+         "The pipeline now derives the design space from the dataset and restricts low-confidence designs "
+         "to training only.",
+         "Implemented", DONE),
+        ("M1", "Member 1", "Driving-cycle provider (input to the energy model)", "#2E7D4F",
+         "Two Sri Lankan driving cycles have been delivered; the remaining cycles are under development.",
+         "The energy model accepts cycles in the agreed 1 Hz format, so the delivered cycles are used "
+         "directly and the rest are added on release.",
+         "2 cycles delivered", WAIT),
+    ]
+    cw, cg, top, bottom = (17.8 - 2 * 0.25) / 3, 0.25, 6.55, 1.75
+    for i, (tag, name, role, accent, said, done, status, (chip_bg, chip_ink)) in enumerate(items):
+        x = 0.1 + i * (cw + cg)
+        ax.add_patch(FancyBboxPatch((x, bottom), cw, top - bottom, boxstyle="round,pad=0,rounding_size=0.15",
+                                    facecolor="white", edgecolor=BORDER, linewidth=1.2))
+        ax.add_patch(FancyBboxPatch((x, top - 0.09), cw, 0.09, boxstyle="square,pad=0", facecolor=accent,
+                                    edgecolor="none"))
+        ax.add_patch(plt.Circle((x + 0.55, top - 0.62), 0.32, facecolor=accent, edgecolor="none"))
+        ax.text(x + 0.55, top - 0.62, tag, fontsize=11, weight="bold", color="white", ha="center", va="center")
+        ax.text(x + 1.05, top - 0.48, name, fontsize=13, weight="bold", color=NAVY, va="center")
+        ax.text(x + 1.05, top - 0.8, role, fontsize=9.5, color=GREY, va="center")
+        ax.plot([x + 0.25, x + cw - 0.25], [top - 1.15, top - 1.15], color=BORDER, linewidth=1)
+        ax.text(x + 0.3, top - 1.45, "FEEDBACK", fontsize=9, weight="bold", color=accent, va="center")
+        ax.text(x + 0.3, top - 1.7, "“" + "\n".join(textwrap.wrap(said, 52)) + "”", fontsize=10.5, style="italic",
+                color=NAVY, va="top", linespacing=1.4)
+        ax.text(x + cw / 2, top - 2.62, "↓", fontsize=15, color=accent, ha="center", va="center")
+        ax.text(x + 0.3, top - 2.95, "ACTION TAKEN", fontsize=9, weight="bold", color=accent, va="center")
+        ax.text(x + 0.3, top - 3.2, "\n".join(textwrap.wrap(done, 54)), fontsize=10.5, color=NAVY, va="top",
+                linespacing=1.4)
+        ax.add_patch(FancyBboxPatch((x + 0.3, bottom + 0.2), 0.55 + 0.11 * len(status), 0.38,
+                                    boxstyle="round,pad=0,rounding_size=0.18", facecolor=chip_bg, edgecolor="none"))
+        ax.text(x + 0.46, bottom + 0.39, "●  " + status, fontsize=9.5, weight="bold", color=chip_ink, va="center")
+
+    ax.add_patch(FancyBboxPatch((0.1, 0.1), 17.8, 1.4, boxstyle="round,pad=0,rounding_size=0.15",
+                                facecolor="#F1EEFA", edgecolor="none"))
+    ax.text(0.4, 1.12, "PLANNED USER EVALUATION", fontsize=10, weight="bold", color="#5B45A8", va="center")
+    ax.text(0.4, 0.62, "A task-based session with EV design practitioners on the integrated dashboard: evaluate a "
+            "candidate shape, interpret the predicted drag and its uncertainty,\nrecord observed difficulties, and "
+            "convert the findings into Planner tasks.", fontsize=10.5, color=NAVY, va="center", linespacing=1.4)
+    return fig
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
-    for name, make in (("pp1_component3_architecture", architecture), ("pp1_workflow1_methodology", methodology)):
+    for name, make in (("pp1_component3_architecture", architecture), ("pp1_workflow1_methodology", methodology),
+                       ("pp1_design_excellence", design_excellence), ("pp1_user_feedback", feedback)):
         fig = make()
         path = os.path.join(OUT, f"{name}.png")
-        fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=BG)
+        fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
         plt.close(fig)
         print("wrote", path)
 
