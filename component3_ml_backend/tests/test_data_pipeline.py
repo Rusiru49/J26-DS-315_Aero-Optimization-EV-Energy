@@ -131,3 +131,60 @@ def test_a_new_holdout_draw_follows_the_same_rules(small_data):
     flags = other.runs.set_index("run_id")
     assert not flags.loc[list(hold_b), "is_corner"].any() and not flags.loc[list(hold_b), "is_baseline"].any()
     assert set(ds.holdout_runs()["run_id"]) == hold_a               # the original split is unchanged
+
+
+# ------------------------------------------------------------------ #
+# Member 2's real delivery: npz/ folder, partial delivery, Cd_label,
+# low-confidence designs, the folder's own design box
+# ------------------------------------------------------------------ #
+def _as_member2_delivery(small_data, tmp_path):
+    """Copy of the small data laid out like Member 2's package: npz/ folder,
+    Cd_label and morph_confidence columns, design D005 marked low-confidence
+    with a re-mesh label 2% above Cd_mean, and two planned designs not run yet."""
+    folder = _copy(small_data, tmp_path)
+    os.rename(os.path.join(folder, "faces"), os.path.join(folder, "npz"))
+    table = pd.read_csv(os.path.join(folder, "run_table.csv"))
+    table["morph_confidence"] = np.where(table["design_id"] == "D005", "low", "high")
+    table["Cd_label"] = np.where(table["design_id"] == "D005", table["Cd_mean"] * 1.02, table["Cd_mean"])
+    table.to_csv(os.path.join(folder, "run_table.csv"), index=False)
+    designs = pd.read_csv(os.path.join(folder, "design_table.csv"))
+    extra = designs.tail(2).assign(design_id=["D998", "D999"])
+    pd.concat([designs, extra]).to_csv(os.path.join(folder, "design_table.csv"), index=False)
+    return folder
+
+
+def test_member2_layout_loads_and_partial_delivery_is_only_a_warning(small_data, tmp_path):
+    folder = _as_member2_delivery(small_data, tmp_path)
+    assert faces_path(folder, "D000", 100).endswith(os.path.join("npz", "sedan_D000_100kmh.npz"))
+    results = check_dataset(folder)
+    assert [r for r in results if r[1] == "FAIL"] == []
+    assert _status(results, "every planned design has been run") == "WARN"
+    assert _status(results, "low-confidence designs") == "WARN"   # its face sum no longer matches the label
+    assert len(CFDDataset(folder, 100).runs) == 11
+
+
+def test_target_is_cd_label_and_low_confidence_designs_never_test(small_data, tmp_path):
+    folder = _as_member2_delivery(small_data, tmp_path)
+    ds = CFDDataset(folder, 100)
+    table = pd.read_csv(os.path.join(folder, "run_table.csv"))
+    row = table[(table.design_id == "D005") & (table.speed_kmh == 100)].iloc[0]
+    runs = ds.runs.set_index("run_id")
+    assert runs.loc["D005", "Cd"] == pytest.approx(row.Cd_label)
+    # both drag parts are scaled by label / Cd_mean
+    assert runs.loc["D005", "Cd_pressure"] == pytest.approx(row.Cd_p * row.Cd_label / row.Cd_mean)
+    assert runs.loc["D005", "Cd_friction"] == pytest.approx(row.Cd_f * row.Cd_label / row.Cd_mean)
+    for seed in range(20):
+        assert "D005" not in set(ds.with_split(seed).holdout_runs()["run_id"])
+
+
+def test_parameter_ranges_csv_sets_the_design_box(small_data, tmp_path):
+    folder = _copy(small_data, tmp_path)
+    saved = dict(config.SHAPE_PARAM_BOUNDS), dict(config.BASELINE_SHAPE)
+    ranges = pd.read_csv(os.path.join(folder, "parameter_ranges.csv"))
+    ranges.loc[ranges.parameter == "ground_clearance_mm", ["design_min", "design_max"]] = [100.0, 200.0]
+    ranges.to_csv(os.path.join(folder, "parameter_ranges.csv"), index=False)
+    try:
+        CFDDataset(folder, 100)
+        assert config.SHAPE_PARAM_BOUNDS["ground_clearance_mm"] == (100.0, 200.0)
+    finally:
+        config.set_design_space(*saved)

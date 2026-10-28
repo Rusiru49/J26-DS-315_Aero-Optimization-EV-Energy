@@ -261,6 +261,12 @@ def generate_dataset(out_dir=config.PLACEHOLDER_DATA_DIR, n_designs=config.N_DES
     }
     with open(os.path.join(out_dir, "case.json"), "w") as fh:
         json.dump(case, fh, indent=2)
+    # The design box this data was made with, in Member 2's parameter_ranges.csv columns.
+    pd.DataFrame([
+        {"parameter": n, "unit": "mm" if n.endswith("_mm") else "deg", "baseline_D000": config.BASELINE_SHAPE[n],
+         "design_min": config.SHAPE_PARAM_BOUNDS[n][0], "design_max": config.SHAPE_PARAM_BOUNDS[n][1]}
+        for n in config.SHAPE_PARAM_NAMES
+    ]).to_csv(os.path.join(out_dir, "parameter_ranges.csv"), index=False)
     return design_table, pd.DataFrame(rows)
 
 

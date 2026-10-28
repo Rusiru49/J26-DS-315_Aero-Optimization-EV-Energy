@@ -57,9 +57,9 @@ def main():
 
     stage("data checker (all files)", lambda: check_dataset(OUT), log)
     ds = stage("load the dataset (100 km/h)", lambda: CFDDataset(OUT, 100), log)
-    pod = stage("POD + geometry model + calibrations", lambda: fit_pod(ds), log)
-    choice = stage("choose the labeller (5-fold CV)", lambda: select_labeller(ds), log)
-    (kind, method), _ = choice
+    choice = stage("choose the labeller and pattern count (5-fold CV)", lambda: select_labeller(ds), log)
+    (kind, method, n_modes), _ = choice
+    pod = stage("POD + geometry model + calibrations", lambda: fit_pod(ds, n_modes), log)
     gp = stage(f"helper GP ({kind})", lambda: train_helper_gp(ds, pod, kind), log)
     shapes = propose_shapes(config.N_SYNTHETIC_SHAPES)
     labels = stage(f"label 1,200 synthetic shapes ({method})", lambda: label_shapes(gp, pod, shapes, method), log)

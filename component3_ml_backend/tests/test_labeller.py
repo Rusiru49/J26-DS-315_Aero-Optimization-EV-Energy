@@ -65,7 +65,16 @@ def test_per_mode_helper_returns_every_pattern(dataset, pod):
     assert labels.shape == (2,) and np.all(np.isfinite(labels))
 
 
-def test_cross_validation_compares_all_four_labellers(dataset):
-    (kind, method), table = select_labeller(dataset, n_folds=3)
-    assert set(table) == {(k, m) for k in ("per_mode", "shared") for m in ("exact", "ridge")}
-    assert table[(kind, method)] == min(table.values())
+def test_cross_validation_compares_labellers_and_pattern_counts(dataset):
+    choice, table = select_labeller(dataset, n_folds=3)
+    grid = [m for m in config.POD_MODE_GRID if m <= config.N_POD_MODES]
+    assert set(table) == {(k, m, n) for k in ("per_mode", "shared") for m in ("exact", "ridge") for n in grid}
+    assert table[choice] == min(table.values())
+
+
+def test_per_pattern_gps_do_not_depend_on_how_many_patterns_are_kept(dataset):
+    """select_labeller_arrays fits the per-pattern GPs once and slices them; that is
+    only valid if the first k patterns of a 15-pattern POD equal a k-pattern POD."""
+    from component3.workflow1.pod import dataset_arrays, fit_pod_arrays
+    a = dataset_arrays(dataset, dataset.real_runs())
+    assert np.allclose(fit_pod_arrays(a, 4).mode_shapes, fit_pod_arrays(a, 15).mode_shapes[:4])

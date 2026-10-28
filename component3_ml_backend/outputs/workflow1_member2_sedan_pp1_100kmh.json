@@ -1,0 +1,144 @@
+{
+  "dataset": "member2_sedan_pp1",
+  "speed_kmh": 100,
+  "drag_model": "xgboost+aug",
+  "one_model_all_speeds": true,
+  "n_designs": 30,
+  "n_testable": 22,
+  "validation": "cross-validation by design, 4 groups x 3 repeats, 22 testable designs hidden at every speed, scored on real CFD only",
+  "labeller_choices": [
+    "per_mode+ridge, 2 patterns",
+    "per_mode+ridge, 2 patterns",
+    "shared+ridge, 2 patterns",
+    "per_mode+ridge, 2 patterns",
+    "shared+ridge, 4 patterns",
+    "per_mode+ridge, 2 patterns",
+    "per_mode+ridge, 2 patterns",
+    "per_mode+ridge, 2 patterns",
+    "shared+ridge, 2 patterns",
+    "per_mode+ridge, 10 patterns",
+    "per_mode+ridge, 4 patterns",
+    "per_mode+ridge, 2 patterns"
+  ],
+  "results_counts": [
+    {
+      "candidate": "xgboost+aug",
+      "mae": 8.9,
+      "mae_spread": 1.26,
+      "rmse": 11.88,
+      "worst": 32.05
+    },
+    {
+      "candidate": "xgboost+real",
+      "mae": 18.18,
+      "mae_spread": 1.77,
+      "rmse": 21.5,
+      "worst": 54.44
+    },
+    {
+      "candidate": "random_forest+aug",
+      "mae": 9.52,
+      "mae_spread": 1.35,
+      "rmse": 12.47,
+      "worst": 30.92
+    },
+    {
+      "candidate": "random_forest+real",
+      "mae": 15.87,
+      "mae_spread": 1.48,
+      "rmse": 18.85,
+      "worst": 41.0
+    },
+    {
+      "candidate": "ann_mlp+aug",
+      "mae": 8.82,
+      "mae_spread": 2.01,
+      "rmse": 11.66,
+      "worst": 34.2
+    },
+    {
+      "candidate": "ann_mlp+real",
+      "mae": 9.79,
+      "mae_spread": 0.23,
+      "rmse": 11.56,
+      "worst": 25.66
+    },
+    {
+      "candidate": "ann_mlp+aug_weighted",
+      "mae": 9.27,
+      "mae_spread": 2.1,
+      "rmse": 12.29,
+      "worst": 37.06
+    },
+    {
+      "candidate": "ann_mlp+pretrain_finetune",
+      "mae": 8.8,
+      "mae_spread": 2.0,
+      "rmse": 11.64,
+      "worst": 34.15
+    },
+    {
+      "candidate": "label",
+      "mae": 8.84,
+      "mae_spread": 2.15,
+      "rmse": 11.67,
+      "worst": 33.41
+    }
+  ],
+  "diagnostic_counts": {
+    "xgboost": 2.6,
+    "random_forest": 3.86,
+    "ann_mlp": 1.82
+  },
+  "augmentation_wins": {
+    "xgboost": [
+      3,
+      3
+    ],
+    "random_forest": [
+      3,
+      3
+    ],
+    "ann_mlp": [
+      2,
+      3
+    ]
+  },
+  "frontal_area_results": [
+    {
+      "model": "quadratic_ridge",
+      "mae_percent": 0.003287461411106682,
+      "worst_percent": 0.01722370626492641
+    },
+    {
+      "model": "linear_ridge",
+      "mae_percent": 0.029327541133391425,
+      "worst_percent": 0.09006816476967873
+    }
+  ],
+  "ranking_mean_over_speeds_counts": {
+    "xgboost+aug": 9.26,
+    "ann_mlp+pretrain_finetune": 9.34,
+    "ann_mlp+aug": 9.36,
+    "ann_mlp+aug_weighted": 9.71,
+    "random_forest+aug": 9.91,
+    "ann_mlp+real": 10.22,
+    "random_forest+real": 16.08,
+    "xgboost+real": 18.25
+  },
+  "synthetic_label_checks": {
+    "n_proposed": 1200.0,
+    "kept": 0.9914583333333334,
+    "out_of_region": 0.005625000000000001,
+    "cp_above_stagnation": 0.0,
+    "pressure_drag_not_positive": 0.0,
+    "cd_out_of_range": 0.0029861111111111113
+  },
+  "label_uncertainty_calibration": {
+    "a": 2.0677056572807047,
+    "b": 0.009006100042506834,
+    "coverage_1sigma": 0.6666666666666666,
+    "coverage_2sigma": 0.9090909090909091,
+    "median_sigma": 0.010620732697837998
+  }
+}

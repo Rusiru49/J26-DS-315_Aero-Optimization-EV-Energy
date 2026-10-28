@@ -8,9 +8,11 @@ Each check yields (name, status, detail) with status PASS, WARN or FAIL.
 FAIL means the data cannot be used as is; WARN means look at it.
 
 The key integrity check sums p*n*A and tau*A in the drag direction and
-compares with the table's Cd_mean (tolerance: Member 2's 1%). The drag
-direction and the sign of tau are still to be confirmed by Member 2, so the
-checker tries both signs of each and reports which combination matches.
+compares with the table's label (Cd_label, or Cd_mean without it; tolerance:
+Member 2's 1%). The checker tries both signs of the drag direction and of tau
+and reports which combination matches. Low-confidence designs carry a field
+mapped from a full re-mesh, whose face sum is off by the mapping error that
+Member 2 reports (map_cd_err_pct), so they are reported separately.
 """
 
 import itertools
@@ -21,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 from component3 import config
-from component3.data.loader import faces_path, normalize_run_table, read_run_npz
+from component3.data.loader import faces_path, normalize_run_table, read_design_space, read_run_npz
 
 REQUIRED = ["design_id", "speed_kmh", "Cd_mean", "Cd_p", "Cd_f", "A_frontal", "q_ref", "converged", "morph_passed"] + list(
     config.SHAPE_PARAM_NAMES)
@@ -80,15 +82,20 @@ def check_dataset(data_dir, category=config.CATEGORY, tolerance=config.CD_SUM_CH
     per_design = runs.groupby("design_id")["speed_kmh"].nunique()
     _result(R, "every design has both speeds", bool((per_design == len(expected)).all()),
             f"{int((per_design != len(expected)).sum())} designs without both")
-    _result(R, "design_table and run_table list the same designs",
-            set(designs["design_id"]) == set(runs["design_id"]), f"{designs['design_id'].nunique()} vs {runs['design_id'].nunique()}")
+    unknown = sorted(set(runs["design_id"]) - set(designs["design_id"]))
+    _result(R, "every run's design is in design_table", not unknown, f"not in design_table: {unknown[:5]}" if unknown else "")
+    not_run = set(designs["design_id"]) - set(runs["design_id"])
+    _result(R, "every planned design has been run", not not_run,
+            f"partial delivery: {runs['design_id'].nunique()} of {designs['design_id'].nunique()} designs run so far",
+            warn_only=True)
     _result(R, "baseline D000 present", "D000" in set(runs["design_id"]), "")
 
     merged = runs.merge(designs[["design_id"] + list(config.SHAPE_PARAM_NAMES)], on="design_id", suffixes=("", "_d"))
     diffs = max(float(np.abs(merged[c] - merged[c + "_d"]).max()) for c in config.SHAPE_PARAM_NAMES)
     _result(R, "shape values agree between the two tables", diffs < 1e-6, f"max difference {diffs:.2e}")
-    out_of_range = [c for c in config.SHAPE_PARAM_NAMES
-                    if not runs[c].between(*config.SHAPE_PARAM_BOUNDS[c]).all()]
+    space = read_design_space(data_dir)
+    bounds = space[0] if space else config.SHAPE_PARAM_BOUNDS
+    out_of_range = [c for c in config.SHAPE_PARAM_NAMES if not runs[c].between(*bounds[c]).all()]
     _result(R, "shape values inside the agreed ranges", not out_of_range, f"outside: {out_of_range}", warn_only=True)
 
     ok_runs = runs[runs["morph_passed"].astype(bool) & runs["converged"].astype(bool)]
@@ -110,6 +117,9 @@ def check_dataset(data_dir, category=config.CATEGORY, tolerance=config.CD_SUM_CH
     drag_dirs = [config.FLOW_DIRECTION, tuple(-np.array(config.FLOW_DIRECTION))]
     combos = list(itertools.product(range(len(drag_dirs)), (1.0, -1.0)))
     errors = {c: [] for c in combos}
+    mapped_errors = {c: [] for c in combos}   # low-confidence designs (re-mesh field mapped onto the faces)
+    label_col = "Cd_label" if "Cd_label" in runs else "Cd_mean"
+    low = runs.get("morph_confidence", pd.Series("high", index=runs.index)).astype(str).str.lower().eq("low")
     area_err, mesh_same, baseline_centres = [], [], {}
     rows = list(ok_runs.itertuples())
     if max_runs_for_sum:
@@ -138,14 +148,19 @@ def check_dataset(data_dir, category=config.CATEGORY, tolerance=config.CD_SUM_CH
         cp = f["p"] / r.q_ref
         if cp.min() < -4 or cp.max() > 1.5:
             bad_cp.append((r.design_id, r.speed_kmh))
+        label = getattr(r, label_col)
+        label = r.Cd_mean if pd.isna(label) else label
+        target = mapped_errors if low.loc[r.Index] else errors
         for (di, sgn) in combos:
             cd, _, _, a_front = integrate(f, r.q_ref, drag_dirs[di], sgn, a_ref=r.A_frontal)
-            errors[(di, sgn)].append(abs(cd - r.Cd_mean) / r.Cd_mean)
+            target[(di, sgn)].append(abs(cd - label) / label)
         area_err.append(abs(a_front - r.A_frontal) / r.A_frontal)
-        if r.speed_kmh == min(expected):
+        if r.design_id in baseline_centres:   # the other speed of this design was read already
+            other = baseline_centres[r.design_id]
+            gap = float(np.max(np.abs(other - f["centre"]))) if other.shape == f["centre"].shape else float("inf")
+            mesh_same.append((gap, r.design_id))
+        else:
             baseline_centres[r.design_id] = f["centre"]
-        elif r.design_id in baseline_centres:
-            mesh_same.append(float(np.max(np.abs(baseline_centres[r.design_id] - f["centre"]))))
 
     _result(R, "face files readable with the expected arrays", not bad_shape, f"{len(bad_shape)} problems, e.g. {bad_shape[:2]}")
     _result(R, "same number of faces in every file", len(n_faces) == 1, f"face counts found: {sorted(n_faces)}")
@@ -156,15 +171,26 @@ def check_dataset(data_dir, category=config.CATEGORY, tolerance=config.CD_SUM_CH
             else f"{sum(v <= 0 for v in outward_frac)} files have inward normals")
     _result(R, "Cp values in a sensible range", not bad_cp, f"{len(bad_cp)} files outside -4..1.5", warn_only=True)
     if mesh_same:
-        _result(R, "both speeds use the same faces", max(mesh_same) < 1e-4, f"largest face-centre difference {max(mesh_same):.2e} m")
+        # Each speed is modelled on its own, so a small geometry difference between
+        # the two speeds of one design is a warning, not a stop.
+        worst, worst_id = max(mesh_same)
+        moved = [d for v, d in mesh_same if v >= 1e-4]
+        _result(R, "both speeds use the same faces", not moved,
+                f"largest face-centre difference {worst * 1000:.2f} mm ({worst_id}); designs that differ: {sorted(moved)}",
+                warn_only=True)
 
     if errors[combos[0]]:
         best = min(combos, key=lambda c: np.max(errors[c]))
         worst_err = float(np.max(errors[best]))
         direction = [round(x, 3) for x in drag_dirs[best[0]]]
-        _result(R, f"Cd from the faces matches Cd_mean (tolerance {tolerance:.0%})", worst_err <= tolerance,
+        _result(R, f"Cd from the faces matches {label_col} (tolerance {tolerance:.0%})", worst_err <= tolerance,
                 f"best match: drag direction {direction}, tau sign {best[1]:+.0f}; worst relative error {worst_err:.3%} "
                 f"over {len(errors[best])} runs")
+        if mapped_errors[best]:
+            _result(R, "low-confidence designs: mapped re-mesh field vs label", False,
+                    f"worst relative error {float(np.max(mapped_errors[best])):.2%} over {len(mapped_errors[best])} runs "
+                    f"(the mapping error Member 2 reports; these designs train but are never in the test set)",
+                    warn_only=True)
         _result(R, "frontal area from the faces matches A_frontal", float(np.max(area_err)) < 0.01,
                 f"worst relative error {float(np.max(area_err)):.3%}", warn_only=True)
     return R

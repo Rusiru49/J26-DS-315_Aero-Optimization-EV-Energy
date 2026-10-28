@@ -1,0 +1,28 @@
+=== Workflow 1: real data, 100 km/h ===
+
+1. Data check: 25/25 checks passed
+2. Designs: 30 usable (0 failed left out); 22 can be tested (baseline, corners and 3 low-confidence designs always train)
+   design box: windshield_angle_deg 22-34, spoiler_angle_deg 0-20, boat_tail_angle_deg 5-25, hood_angle_deg 5-15, ground_clearance_mm 110-190
+
+3. POD on all designs: 15 patterns explain 96.5% of the pressure variation
+   face integral of the TRUE fields vs Cd label: mean 0.68, worst 7.20 drag counts (checks the conventions)
+
+4. Cross-validation by design: 4 groups x 3 repeats; every testable design is the exam once per repeat
+   running 12 folds (2 parallel workers)
+   labeller chosen inside the folds: {'per_mode+ridge': 11, 'shared+ridge': 1}
+
+5. Results on REAL designs only, drag counts (mean over repeats +/- spread, worst design):
+   helper labels (label check)        13.0 +/-  1.7   worst  36.0
+   xgboost        with augmentation   13.3 +/-  1.7   real only   17.2 +/-  1.2   (augmentation better in 3/3 repeats)
+   random_forest  with augmentation   13.4 +/-  1.5   real only   14.8 +/-  0.2   (augmentation better in 2/3 repeats)
+   ann_mlp        with augmentation   11.7 +/-  1.6   real only   10.8 +/-  0.4   (augmentation better in 1/3 repeats)
+   ann_mlp+aug_weighted         11.9 +/-  1.5   worst  37.5
+   ann_mlp+pretrain_finetune    11.7 +/-  1.6   worst  37.3
+   diagnostic - augmented models vs synthetic shapes they never saw (how well they learned the helper):
+   xgboost 3.1, random_forest 4.7, ann_mlp 4.2
+
+6. Chosen drag model: ann_mlp+real (lowest cross-validated error). Augmentation is NOT used for this dataset.
+   retrained on all 30 designs, saved to D:\Research\J26-DS-315_Aero-Optimization-EV-Energy\component3_ml_backend\models\member2_sedan_pp1_100kmh\drag_model.joblib
+   expected error on a new shape: about 10.8 drag counts (RMSE 13.8, worst seen 32.1)
+
+7. Frontal-area model: quadratic_ridge, cross-validated error mean 0.00%, worst 0.02%; saved to D:\Research\J26-DS-315_Aero-Optimization-EV-Energy\component3_ml_backend\models\member2_sedan_pp1_100kmh\frontal_area_model.joblib

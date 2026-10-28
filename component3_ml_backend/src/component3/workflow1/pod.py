@@ -119,6 +119,38 @@ class PODModel:
         cd_pressure = -(mean_part + mode_part) / self.frontal_area.predict(x_unit).ravel()
         return cd_pressure + self.friction.predict(x_unit)
 
+    def cd_gradient(self, x_unit, method=None):
+        """d Cd / d (pattern amount) for each shape and pattern, shape (m, n_modes).
+        Cd is linear in the amounts for both methods, so this is exact and lets the
+        uncertainty of the predicted amounts be carried through to Cd."""
+        method = method if method not in (None, "auto") else (
+            config.LABEL_METHOD if config.LABEL_METHOD != "auto" else "exact")
+        x_unit = np.atleast_2d(x_unit)
+        n_modes = self.mode_shapes.shape[0]
+        if method == "ridge" or self.geometry is None:
+            g = self.ridge.coef_[:n_modes] / self.scaler.scale_[:n_modes]
+            return np.tile(g, (len(x_unit), 1))
+        feats = self.geometry.features(x_unit)
+        return -(feats @ self._mode_w.T + self._mode_b) / self.frontal_area.predict(x_unit).reshape(-1, 1)
+
+    def cd_pressure_batch(self, amplitudes, x_unit):
+        """Pressure drag of the rebuilt pressure field, integrated over the predicted
+        face geometry (the physics route, used for the per-label checks)."""
+        amplitudes, x_unit = np.atleast_2d(amplitudes), np.atleast_2d(x_unit)
+        feats = self.geometry.features(x_unit)
+        mean_part = feats @ self._mean_w + self._mean_b
+        mode_part = np.sum(amplitudes * (feats @ self._mode_w.T + self._mode_b), axis=1)
+        return -(mean_part + mode_part) / self.frontal_area.predict(x_unit).ravel()
+
+    def max_cp_batch(self, amplitudes, chunk=100):
+        """Largest pressure coefficient on the rebuilt surface field of each shape
+        (built in chunks so 1,200 full fields never sit in memory at once)."""
+        amplitudes = np.atleast_2d(amplitudes)
+        out = np.empty(len(amplitudes))
+        for i in range(0, len(amplitudes), chunk):
+            out[i:i + chunk] = (self.mean_field + amplitudes[i:i + chunk] @ self.mode_shapes).max(axis=1)
+        return out
+
     def reconstruct_cd(self, amplitudes, params, method=None):
         """Pattern amounts + the shape's 5 values -> Cd (no CFD needed)."""
         return float(self.cd_batch(amplitudes, shape_features(params), method)[0])

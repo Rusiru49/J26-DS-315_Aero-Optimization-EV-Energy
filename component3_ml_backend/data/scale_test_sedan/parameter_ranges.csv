@@ -1,0 +1,6 @@
+parameter,unit,baseline_D000,design_min,design_max
+windshield_angle_deg,deg,30.0,25,35
+spoiler_angle_deg,deg,5.0,0,25
+boat_tail_angle_deg,deg,8.0,0,20
+hood_angle_deg,deg,6.0,1,11
+ground_clearance_mm,mm,160.0,130,190
