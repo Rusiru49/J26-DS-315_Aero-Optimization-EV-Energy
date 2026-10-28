@@ -244,4 +244,4 @@ def sample_statistics(settings: Settings, seed: int = 42) -> dict:
         "by_condition": [{"condition": c, "mean_saving_pct": _f(np.mean(v)),
                           "avg_speed_kmh": float(df[df.condition == c].avg_speed_kmh.iloc[0])}
                          for c, v in groups.items()],
-    }
+    } 

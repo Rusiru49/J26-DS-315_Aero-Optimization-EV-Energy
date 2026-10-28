@@ -6,7 +6,7 @@ status pass / warn / fail. Nothing is silently used when it fails.
 import math
 from collections import Counter
 
-from ..config import Settings
+from ..config import Settings 
 from .comparison import savings
 from .store import DataStore
 

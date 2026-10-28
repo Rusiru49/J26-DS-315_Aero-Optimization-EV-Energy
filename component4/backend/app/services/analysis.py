@@ -12,7 +12,7 @@ from typing import Optional
 from .comparison import compare, pick_design
 from .store import CONDITION_LABELS, DataStore
 
-
+ 
 def _short(label: str) -> str:
     return label.split(" (")[0]
 

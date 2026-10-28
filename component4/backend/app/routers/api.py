@@ -8,7 +8,7 @@ from ..deps import get_settings, get_store
 from ..services import analysis, comparison, designs, factors, statistics, validation
 from ..services.store import CONDITION_LABELS, DataStore
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api") 
 
 
 @router.get("/health")

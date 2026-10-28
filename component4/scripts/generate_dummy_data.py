@@ -19,7 +19,7 @@ OUT = Path(__file__).resolve().parents[1] / "data" / "c3_package_dummy.json"
 
 TARIFF_LKR_PER_KWH = 45.0   # placeholder (same as C3's placeholder)
 CHARGING_EFF = 0.90
-
+ 
 EV = {
     "ev_id": "EV01",
     "ev_model": "Sedan (dummy, BYD Seal-based body)",
@@ -175,7 +175,7 @@ def build() -> dict:
         },
     }
 
-
+ 
 if __name__ == "__main__":
     pkg = build()
     OUT.parent.mkdir(parents=True, exist_ok=True)

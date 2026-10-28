@@ -12,7 +12,7 @@ from .store import CONDITION_LABELS, DataStore
 
 def _pct(delta: float, base: float) -> Optional[float]:
     return None if base == 0 else delta / base * 100.0
-
+ 
 
 def savings(energy_b: float, energy_o: float, range_b: float, range_o: float,
             cost_b: float, cost_o: float) -> dict:
