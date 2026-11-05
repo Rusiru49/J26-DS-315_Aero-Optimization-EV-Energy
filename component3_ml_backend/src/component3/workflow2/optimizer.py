@@ -13,13 +13,17 @@ swap, without a second dependency.
 Each trial: shape params -> surrogate -> Cd, and (if an area model is given)
 shape params -> frontal area A -> energy_model with drag area Cd*A -> cycle
 energy (Wh/km). Without an area model the constant config.FRONTAL_AREA_M2
-is used. Tracks the best shape found over the whole search (not the most
+is used. If the surrogate also takes the speed (Workflow 1's combined model),
+every second of the cycle gets the Cd at its own speed (see _cd_per_second),
+so a slow cycle leans on the low-speed drag and a fast one on the high-speed
+drag, and the best shape can differ between cycles. Tracks the best shape found over the whole search (not the most
 recently tried one — Optuna's study.best_trial already does this natively).
 Compares the best-found shape against the baseline with a tolerance band:
 within it, report "already near-optimal"; beyond it, report the better
 shape found plus the resulting range/cost improvement.
 """
 
+import numpy as np
 import optuna
 
 from component3 import config
@@ -29,17 +33,41 @@ from component3.workflow1.training import predict_cd, predict_frontal_area
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
+def _cd_per_second(model, shape, cycle):
+    """
+    The drag coefficient the energy model uses for one shape on one prepared
+    cycle. Returns (cd, cd_by_speed).
+
+    A shape-only surrogate (5 inputs) gives one Cd for the whole cycle and an
+    empty cd_by_speed. The combined Workflow 1 surrogate takes the speed in
+    km/h as a 6th input but was trained at the CFD speeds only
+    (config.SPEEDS_MS), so the shape is predicted at those speeds and each
+    second gets the Cd interpolated linearly at its own speed, held flat below
+    the lowest and above the highest CFD speed (never extrapolated).
+    """
+    n_shape = len(config.SHAPE_PARAM_NAMES)
+    if getattr(model, "n_features_in_", n_shape) == n_shape:
+        return predict_cd(model, shape), {}
+    speeds = sorted(config.SPEEDS_MS)
+    rows = [[shape[name] for name in config.SHAPE_PARAM_NAMES] + [s] for s in speeds]
+    cds = model.predict(np.array(rows, dtype=np.float64))
+    cd_by_speed = {s: float(c) for s, c in zip(speeds, cds)}
+    return np.interp(cycle["speed_kmh"], speeds, cds), cd_by_speed
+
+
 def _evaluate_shape(model, area_model, cycle, shape, vehicle_kwargs):
-    """One shape -> drag, frontal area (if modelled), energy result."""
-    cd = predict_cd(model, shape)
+    """One shape -> drag, frontal area (if modelled), energy result. `cycle`
+    is the dict from prepare_cycle()."""
+    cd, cd_by_speed = _cd_per_second(model, shape, cycle)
     kwargs = dict(vehicle_kwargs)
     if area_model is not None:
         if "frontal_area_m2" in kwargs:
             raise ValueError("Give either area_model or frontal_area_m2 in vehicle_kwargs, not both.")
         kwargs["frontal_area_m2"] = predict_frontal_area(area_model, shape)
     result = simulate_cycle(cycle, cd, return_trace=False, **kwargs)
+    result["cd_by_speed"] = cd_by_speed
     result["frontal_area_m2"] = kwargs.get("frontal_area_m2", config.FRONTAL_AREA_M2)
-    result["cd_a_m2"] = cd * result["frontal_area_m2"]
+    result["cd_a_m2"] = result["cd"] * result["frontal_area_m2"]
     return result
 
 
