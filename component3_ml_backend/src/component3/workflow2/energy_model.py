@@ -112,7 +112,10 @@ def simulate_cycle(
     NumPy arrays (one pass over the whole cycle, no Python loop).
 
     cycle_df is a table with columns time_s, speed_kmh (from
-    load_driving_cycle()) or the dict from prepare_cycle(). Returns a dict
+    load_driving_cycle()) or the dict from prepare_cycle(). cd is one value,
+    or one value per second of the prepared cycle (a speed-dependent Cd from
+    the optimiser); the returned "cd" is then the effective Cd, the single
+    value that does the same aerodynamic work over the cycle. Returns a dict
     with total_wh, distance_km, wh_per_km, range_km, cost_lkr and, if
     return_trace, a per-second trace DataFrame (for plotting and debugging).
     The optimiser passes return_trace=False because it only needs the summary.
@@ -121,6 +124,9 @@ def simulate_cycle(
     dt, v, accel = c["dt"], c["v_now"], c["accel"]
 
     f_aero = 0.5 * config.AIR_DENSITY_KG_M3 * cd * frontal_area_m2 * v ** 2
+    if np.ndim(cd) > 0:
+        aero_work = v ** 3 * dt
+        cd = float(np.sum(cd * aero_work) / np.sum(aero_work)) if np.sum(aero_work) > 0 else float(np.mean(cd))
     f_roll = np.where(v > 0, config.ROLLING_RESISTANCE_COEFF * mass_kg * config.GRAVITY_M_S2, 0.0)
     f_accel = mass_kg * accel
     f_prop = f_aero + f_roll + f_accel
