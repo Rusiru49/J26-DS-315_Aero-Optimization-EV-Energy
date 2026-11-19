@@ -99,13 +99,19 @@ def test_wh_per_km_is_plausible_for_a_compact_ev():
     assert 50.0 < result["wh_per_km"] < 400.0
 
 
-def test_expressway_cycle_uses_more_energy_per_km_than_urban_stop_start():
+def test_drag_costs_more_energy_per_km_on_the_expressway_than_in_urban_stop_start():
     """Aero drag dominates at higher, steadier speed; this is the physical
     basis for the whole project's cycle-aware optimisation claim, so it's
     worth a direct regression test rather than assuming the physics is
-    self-evidently correct."""
+    self-evidently correct. The test compares how much a higher Cd costs per
+    km on each cycle, not the total Wh/km: the total also depends on the mass
+    (with the BYD Seal's 2,130 kg, urban stop-start costs about as much per km
+    as the expressway), while the drag effect is pure aerodynamics."""
     from component3.workflow2.energy_model import evaluate_cd_on_cycle
 
-    expressway = evaluate_cd_on_cycle("expressway", cd=config.BASELINE_CD)
-    urban = evaluate_cd_on_cycle("urban", cd=config.BASELINE_CD)
-    assert expressway["wh_per_km"] > urban["wh_per_km"]
+    def drag_cost(cycle):
+        low = evaluate_cd_on_cycle(cycle, cd=config.BASELINE_CD)["wh_per_km"]
+        high = evaluate_cd_on_cycle(cycle, cd=1.1 * config.BASELINE_CD)["wh_per_km"]
+        return high - low
+
+    assert drag_cost("expressway") > 2 * drag_cost("urban") > 0
