@@ -1,0 +1,32 @@
+Workflow 2: baseline vs optimised shape (2026-11-19 18:59)
+Drag model: models/member2_sedan_pp1 (xgboost+aug, inputs windshield_angle_deg, spoiler_angle_deg, boat_tail_angle_deg, hood_angle_deg, ground_clearance_mm, speed_kmh)
+Vehicle: 2130 kg, 82.56 kWh usable, C_rr 0.011, drivetrain 0.9, regen 0.65, aux 650 W, tariff LKR 45.0/kWh
+Search limits: windshield_angle_deg 22-34, spoiler_angle_deg 0-20, boat_tail_angle_deg 5-25, hood_angle_deg 8-15, ground_clearance_mm 125-160
+Optimiser: 150 tries per cycle, baseline tried first; near-optimal = gain <= 2%
+Cycles: urban, suburban, rural, intercity, expressway from D:\Research\J26-DS-315_Aero-Optimization-EV-Energy\outputs
+
+cycle      side        wind spoil  boat  hood     gc  Cd_eff    CdA   Wh/km  range  gain%  verdict
+urban      baseline    28.0  10.0  15.0  10.0  150.0  0.3689  0.805  165.02  500.3   0.00  
+           optimised   22.3   0.1   5.4  13.2  153.4  0.2991  0.650  163.71  504.3   0.79  already near-optimal
+suburban   baseline    28.0  10.0  15.0  10.0  150.0  0.3687  0.804  173.67  475.4   0.00  
+           optimised   22.4   0.1   5.3  13.9  158.8  0.3007  0.650  169.94  485.8   2.15  better shape found
+rural      baseline    28.0  10.0  15.0  10.0  150.0  0.3689  0.805  131.92  625.8   0.00  
+           optimised   22.4   0.0   5.6  13.9  153.5  0.2991  0.650  129.40  638.0   1.92  already near-optimal
+intercity  baseline    28.0  10.0  15.0  10.0  150.0  0.3686  0.804  133.88  616.7   0.00  
+           optimised   22.4   0.1   5.3  13.9  158.8  0.3007  0.650  126.89  650.6   5.22  better shape found
+expressway baseline    28.0  10.0  15.0  10.0  150.0  0.3681  0.803  163.65  504.5   0.00  
+           optimised   24.4   0.0   5.6  13.3  157.7  0.3008  0.651  148.16  557.2   9.46  better shape found
+
+Search time per cycle (s): urban 3.9, suburban 2.6, rural 3.2, intercity 2.9, expressway 7.9
+
+Cross-cycle check: Wh/km of each cycle's best shape (rows) on each cycle (columns)
+                 urban  suburban    rural  intercity  expressway
+best_shape_of                                                   
+urban          163.714   169.920  129.398    126.859     147.969
+suburban       163.719   169.936  129.407    126.889     148.056
+rural          163.713   169.916  129.395    126.850     147.946
+intercity      163.719   169.936  129.407    126.889     148.056
+expressway     163.733   169.971  129.433    126.952     148.162
+
+Largest difference between the best shapes, per cycle (%): urban 0.01, suburban 0.03, rural 0.03, intercity 0.08, expressway 0.15
+A difference this small means the best shape is effectively the same on every cycle; what changes with the cycle is the size of the gain.
