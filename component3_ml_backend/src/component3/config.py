@@ -34,12 +34,18 @@ OUTPUTS_DIR = os.path.join(COMPONENT_ROOT, "outputs")
 RANDOM_STATE = 42
 
 # ------------------------------------------------------------------ #
-# VEHICLE CONSTANTS — placeholder, representative Sri Lanka-market
-# compact/crossover EV. Replace with the team's confirmed vehicle spec
-# once Member 1's design-space survey is finalised.
+# VEHICLE CONSTANTS — BYD Seal Premium (Extended Range, RWD), the car the
+# CFD sedan shell is based on, as sold in Sri Lanka. Proofs (brochures,
+# regulation, cross-checks): Component3-Vehicle-Values-BYD-Seal.md in the
+# project's proofs folder (D:\Research\proofs\vehicle-values).
 # ------------------------------------------------------------------ #
-VEHICLE_MASS_KG = 1650.0
-BATTERY_CAPACITY_KWH = 50.0
+# Kerb weight 2,055 kg (John Keells CG Auto Sri Lanka brochure, Mar 2026;
+# same in BYD Australia/Singapore sheets) + 75 kg driver ("mass of the
+# driver", Regulation (EU) No 1230/2012 Art. 2(20)) = 2,130 kg, which equals
+# EV Database's EU unladen mass for this car.
+VEHICLE_MASS_KG = 2130.0
+# BYD's 82.56 kWh is the usable capacity (EV Database: nominal 84.0, usable 82.5).
+BATTERY_CAPACITY_KWH = 82.56
 # Baseline sedan D000 from Member 2's CFD (100 km/h, coarse mesh, delivery
 # of 2026-10-20): Cd_label 0.3668, A_frontal 2.1812 m^2. Only changes between
 # shapes are meaningful (the coarse mesh reads about 3.5% low).
@@ -100,11 +106,40 @@ BASELINE_SHAPE = {
 }
 
 
+# Realistic styling limits of production sedans, used only by the shape
+# optimiser's search. SHAPE_PARAM_BOUNDS above stays the CFD box for Workflow 1
+# (sampling, augmentation, checks); the search never leaves it, because the
+# drag model has only seen shapes inside it. Hood and ground clearance are
+# narrower than the CFD box: no measured car has a hood flatter than 8 deg,
+# and production sedans sit at 125-160 mm. Proofs:
+# Component3-Design-Space-Styling-Limits.md in the project's proofs folder
+# (D:\Research\proofs\design-space).
+STYLING_BOUNDS = {
+    "windshield_angle_deg": (22.0, 34.0),
+    "spoiler_angle_deg": (0.0, 20.0),
+    "boat_tail_angle_deg": (5.0, 25.0),
+    "hood_angle_deg": (8.0, 15.0),
+    "ground_clearance_mm": (125.0, 160.0),
+}
+
+
 def set_design_space(bounds, baseline):
     """Switch the design box and baseline used by every module. The dicts are
     updated in place, so modules that already hold a reference see the change."""
     SHAPE_PARAM_BOUNDS.update({n: (float(bounds[n][0]), float(bounds[n][1])) for n in SHAPE_PARAM_NAMES})
     BASELINE_SHAPE.update({n: float(baseline[n]) for n in SHAPE_PARAM_NAMES})
+
+
+def search_bounds():
+    """The optimiser's search box: the styling limits inside the current CFD
+    box. A parameter whose styling range does not overlap the box (the older
+    test datasets use a different box) keeps the box."""
+    out = {}
+    for n in SHAPE_PARAM_NAMES:
+        lo = max(STYLING_BOUNDS[n][0], SHAPE_PARAM_BOUNDS[n][0])
+        hi = min(STYLING_BOUNDS[n][1], SHAPE_PARAM_BOUNDS[n][1])
+        out[n] = (lo, hi) if lo < hi else SHAPE_PARAM_BOUNDS[n]
+    return out
 
 
 # ------------------------------------------------------------------ #

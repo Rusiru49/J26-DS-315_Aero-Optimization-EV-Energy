@@ -47,6 +47,28 @@ def test_cd_follows_the_speed_of_each_second(drag_model):
     assert np.all((cd >= lo - 1e-12) & (cd <= hi + 1e-12))
 
 
+def test_search_bounds_are_the_styling_limits_inside_the_cfd_box():
+    saved = dict(config.SHAPE_PARAM_BOUNDS), dict(config.BASELINE_SHAPE)
+    try:
+        cfd_box = {"windshield_angle_deg": (22, 34), "spoiler_angle_deg": (0, 20), "boat_tail_angle_deg": (5, 25),
+                   "hood_angle_deg": (5, 15), "ground_clearance_mm": (110, 190)}
+        config.set_design_space(cfd_box, saved[1])
+        bounds = config.search_bounds()
+        assert bounds["hood_angle_deg"] == (8.0, 15.0)
+        assert bounds["ground_clearance_mm"] == (125.0, 160.0)
+        assert bounds["windshield_angle_deg"] == (22.0, 34.0)
+        for n, (lo, hi) in bounds.items():
+            assert cfd_box[n][0] <= lo < hi <= cfd_box[n][1]
+    finally:
+        config.set_design_space(*saved)
+
+
+def test_optimised_shape_stays_inside_the_search_bounds(drag_model, area_model):
+    result = compare_to_baseline(drag_model, "expressway", n_trials=20, area_model=area_model)
+    for name, (lo, hi) in result["search_bounds"].items():
+        assert lo - 1e-9 <= result["optimised"]["shape"][name] <= hi + 1e-9
+
+
 def test_combined_model_never_reports_worse_than_baseline(drag_model, area_model):
     result = compare_to_baseline(drag_model, "urban", n_trials=15, area_model=area_model)
     assert result["relative_improvement"] >= -1e-9

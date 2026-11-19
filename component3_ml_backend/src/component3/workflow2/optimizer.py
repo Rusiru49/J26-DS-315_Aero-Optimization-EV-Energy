@@ -71,10 +71,10 @@ def _evaluate_shape(model, area_model, cycle, shape, vehicle_kwargs):
     return result
 
 
-def _objective_factory(model, area_model, cycle_df, vehicle_kwargs):
+def _objective_factory(model, area_model, cycle_df, vehicle_kwargs, bounds):
     def objective(trial):
         params = {
-            name: trial.suggest_float(name, *config.SHAPE_PARAM_BOUNDS[name])
+            name: trial.suggest_float(name, *bounds[name])
             for name in config.SHAPE_PARAM_NAMES
         }
         return _evaluate_shape(model, area_model, cycle_df, params, vehicle_kwargs)["wh_per_km"]
@@ -90,10 +90,16 @@ def optimise_shape(
     vehicle_kwargs=None,
     enqueue_shape=None,
     area_model=None,
+    bounds=None,
 ):
     """
     Run the optimiser for one driving cycle. Returns a dict with the best
-    shape found, its Wh/km, and the Optuna study (for convergence plots).
+    shape found, its Wh/km, the search box used and the Optuna study (for
+    convergence plots).
+
+    bounds defaults to config.search_bounds() (the realistic styling limits
+    inside the CFD box); pass config.SHAPE_PARAM_BOUNDS to search the whole
+    CFD box instead.
 
     If enqueue_shape is given (e.g. the baseline shape), it is evaluated as
     the very first trial via study.enqueue_trial — this guarantees the
@@ -102,6 +108,7 @@ def optimise_shape(
     within n_trials by chance.
     """
     vehicle_kwargs = vehicle_kwargs or {}
+    bounds = dict(bounds or config.search_bounds())
     cycle_df = prepare_cycle(load_driving_cycle(cycle_name))
 
     if sampler == "cmaes":
@@ -112,11 +119,11 @@ def optimise_shape(
     study = optuna.create_study(direction="minimize", sampler=optuna_sampler)
     if enqueue_shape is not None:
         study.enqueue_trial(enqueue_shape)
-    study.optimize(_objective_factory(model, area_model, cycle_df, vehicle_kwargs), n_trials=n_trials)
+    study.optimize(_objective_factory(model, area_model, cycle_df, vehicle_kwargs, bounds), n_trials=n_trials)
 
     best_shape = study.best_trial.params
     best_wh_per_km = study.best_value
-    return {"shape": best_shape, "wh_per_km": best_wh_per_km, "study": study}
+    return {"shape": best_shape, "wh_per_km": best_wh_per_km, "search_bounds": bounds, "study": study}
 
 
 def compare_to_baseline(
@@ -127,12 +134,14 @@ def compare_to_baseline(
     n_trials=config.OPTUNA_N_TRIALS,
     vehicle_kwargs=None,
     area_model=None,
+    bounds=None,
 ):
     """
     The check-then-search decision described in the spec: evaluate the
     baseline shape, run the optimiser, and decide whether the baseline is
     already near-optimal (within `tolerance`, relative) or a better shape
     was found — reporting the resulting range and cost change either way.
+    bounds is passed to optimise_shape().
     """
     vehicle_kwargs = vehicle_kwargs or {}
     cycle_df = prepare_cycle(load_driving_cycle(cycle_name))
@@ -146,6 +155,7 @@ def compare_to_baseline(
         vehicle_kwargs=vehicle_kwargs,
         enqueue_shape=baseline_shape,
         area_model=area_model,
+        bounds=bounds,
     )
     best_shape = optimisation["shape"]
     best_result = _evaluate_shape(model, area_model, cycle_df, best_shape, vehicle_kwargs)
@@ -165,6 +175,7 @@ def compare_to_baseline(
         "cycle": cycle_name,
         "already_near_optimal": already_near_optimal,
         "relative_improvement": relative_improvement,
+        "search_bounds": optimisation["search_bounds"],
         "baseline": {"shape": baseline_shape, **baseline_result},
         "optimised": {"shape": best_shape, **best_result},
         "delta_range_km": delta_range_km,
