@@ -33,10 +33,15 @@ def main():
             f"{result['cost_lkr']:>12.2f}"
         )
 
-    assert results["expressway"]["wh_per_km"] > results["urban"]["wh_per_km"], (
-        "expressway should consume more Wh/km than urban (aero dominance at speed)"
+    # Total Wh/km also depends on the mass (a heavy car pays for stop-start
+    # acceleration), so the aero check compares the cost of a 10% higher Cd.
+    drag_cost = {c: evaluate_cd_on_cycle(c, cd=1.1 * config.BASELINE_CD)["wh_per_km"] - results[c]["wh_per_km"]
+                 for c in ("urban", "expressway")}
+    assert drag_cost["expressway"] > drag_cost["urban"], (
+        "drag should cost more energy per km on the expressway than in urban driving"
     )
-    print("\nOK: expressway consumes more Wh/km than urban, as expected.")
+    print(f"\nOK: +10% Cd costs {drag_cost['expressway']:.2f} Wh/km on the expressway and "
+          f"{drag_cost['urban']:.2f} Wh/km in urban driving, as expected.")
 
 
 if __name__ == "__main__":
